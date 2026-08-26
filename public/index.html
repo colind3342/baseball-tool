@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLB Betting Analyzer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0e1a;
+    --card:      #111827;
+    --card2:     #1a2235;
+    --border:    #1f2d3d;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --blue:      #3b82f6;
+    --green:     #10b981;
+    --red:       #ef4444;
+    --amber:     #f59e0b;
+    --purple:    #8b5cf6;
+    --teal:      #14b8a6;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: #0d1526;
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left h1 { font-size: 20px; font-weight: 700; color: #fff; }
+  .header-left h1 span { color: var(--blue); }
+  .header-date { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .header-meta { font-size: 12px; color: var(--muted); }
+  .header-meta span { color: var(--text); }
+  .refresh-bar {
+    width: 120px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .refresh-fill {
+    height: 100%; background: var(--blue); border-radius: 2px;
+    transition: width 1s linear;
+  }
+
+  /* ── Alerts ── */
+  .alerts-section { padding: 12px 24px 0; }
+  .alerts-title { font-size: 11px; font-weight: 700; text-transform: uppercase;
+                  letter-spacing: .08em; color: var(--amber); margin-bottom: 8px; }
+  .alerts-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+  .alert-pill {
+    background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3);
+    border-radius: 8px; padding: 8px 14px; font-size: 12px; display: flex; gap: 8px; align-items: center;
+  }
+  .alert-pill .pill-tag { font-weight: 700; color: var(--amber); }
+
+  /* ── Games ── */
+  .games-section { padding: 16px 24px 40px; }
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(680px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── Game Card ── */
+  .game-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .game-card.live { border-color: rgba(239,68,68,.4); }
+  .game-card.final { opacity: .75; }
+
+  /* Card header */
+  .card-top {
+    background: var(--card2);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .matchup { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; }
+  .team-name { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .team-abbr { font-size: 18px; font-weight: 800; }
+  .team-score { font-size: 22px; font-weight: 900; color: var(--blue); }
+  .vs-sep { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .at-sign { font-size: 13px; color: var(--muted); }
+
+  .game-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .status-badge {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; padding: 2px 8px; border-radius: 20px;
+  }
+  .status-badge.scheduled { background: rgba(59,130,246,.2); color: var(--blue); }
+  .status-badge.pregame   { background: rgba(245,158,11,.2); color: var(--amber); }
+  .status-badge.live      { background: rgba(239,68,68,.2);  color: var(--red);
+                             animation: pulse 1.5s infinite; }
+  .status-badge.final     { background: rgba(100,116,139,.2); color: var(--muted); }
+  .game-time { font-size: 12px; color: var(--muted); }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+
+  /* Venue strip */
+  .venue-strip {
+    padding: 8px 16px;
+    background: rgba(255,255,255,.02);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .venue-left { display: flex; align-items: center; gap: 8px; }
+  .venue-name { font-size: 12px; color: var(--muted); }
+  .park-badge {
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .park-hitter-extreme { background: rgba(239,68,68,.2);  color: var(--red); }
+  .park-hitter         { background: rgba(245,158,11,.2); color: var(--amber); }
+  .park-neutral        { background: rgba(100,116,139,.2);color: var(--muted); }
+  .park-pitcher        { background: rgba(20,184,166,.2); color: var(--teal); }
+  .park-pitcher-extreme{ background: rgba(139,92,246,.2); color: var(--purple); }
+
+  .weather-info { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .weather-icon { font-size: 16px; }
+  .weather-text { color: var(--muted); }
+  .weather-flag { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  .weather-flag.wind { background: rgba(59,130,246,.2); color: var(--blue); }
+  .weather-flag.rain { background: rgba(239,68,68,.2);  color: var(--red); }
+  .weather-flag.dome { background: rgba(100,116,139,.2);color: var(--muted); }
+
+  /* Body */
+  .card-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* ── Pitchers ── */
+  .pitchers-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: start; }
+  .pitcher-panel { display: flex; flex-direction: column; gap: 6px; }
+  .pitcher-panel.home { align-items: flex-end; text-align: right; }
+  .pitcher-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .pitcher-name { font-size: 14px; font-weight: 700; }
+  .pitcher-record { font-size: 12px; color: var(--muted); }
+  .pitcher-tbd { font-size: 13px; color: var(--muted); font-style: italic; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .pitcher-panel.home .stats-grid { direction: rtl; }
+  .stat-box {
+    background: var(--card2); border-radius: 6px; padding: 5px 7px; text-align: center;
+  }
+  .stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .stat-val { font-size: 13px; font-weight: 700; margin-top: 1px; }
+  .stat-val.good  { color: var(--green); }
+  .stat-val.ok    { color: var(--amber); }
+  .stat-val.bad   { color: var(--red);   }
+  .stat-val.neutral { color: var(--text); }
+  .vs-col { display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: var(--muted); padding-top: 24px; }
+
+  /* ── Trends ── */
+  .trends-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .trend-panel { background: var(--card2); border-radius: 8px; padding: 10px 12px; }
+  .trend-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .trend-team { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .streak-badge { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 4px; }
+  .streak-badge.win  { background: rgba(16,185,129,.2); color: var(--green); }
+  .streak-badge.loss { background: rgba(239,68,68,.2);  color: var(--red); }
+  .trend-stats { display: flex; flex-direction: column; gap: 4px; }
+  .trend-row { display: flex; justify-content: space-between; font-size: 12px; }
+  .trend-key { color: var(--muted); }
+  .trend-val { font-weight: 600; }
+
+  /* ── Bullpen ── */
+  .bullpen-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bullpen-panel { background: var(--card2); border-radius: 8px; padding: 10px 12px; }
+  .bullpen-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .bullpen-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .fatigue-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; }
+  .fatigue-badge.low     { background: rgba(16,185,129,.2);  color: var(--green); }
+  .fatigue-badge.medium  { background: rgba(245,158,11,.2);  color: var(--amber); }
+  .fatigue-badge.high    { background: rgba(239,68,68,.2);   color: var(--red); }
+  .fatigue-badge.unknown { background: rgba(100,116,139,.2); color: var(--muted); }
+  .reliever-list { display: flex; flex-direction: column; gap: 3px; }
+  .reliever-item { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+  .reliever-name { color: var(--text); }
+  .reliever-dots { display: flex; gap: 3px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .dot.used     { background: var(--red); }
+  .dot.rested   { background: var(--border); }
+  .dot.consec   { background: var(--amber); }
+  .no-relievers { font-size: 11px; color: var(--muted); font-style: italic; }
+
+  /* ── Odds ── */
+  .odds-section { background: var(--card2); border-radius: 8px; padding: 10px 12px; }
+  .odds-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .odds-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .odds-updated { font-size: 10px; color: var(--muted); }
+  .odds-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .odds-table th {
+    text-align: center; padding: 4px 6px; font-size: 10px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 1px solid var(--border);
+  }
+  .odds-table th.book-col { text-align: left; }
+  .odds-table td { padding: 4px 6px; text-align: center; }
+  .odds-table tr:hover td { background: rgba(255,255,255,.03); }
+  .odds-val { font-weight: 600; }
+  .odds-val.best { color: var(--green); font-weight: 800; }
+  .odds-val.worst { color: var(--muted); }
+  .book-name { text-align: left; color: var(--muted); }
+
+  /* Movement */
+  .movement-row { display: flex; gap: 16px; margin-top: 8px; padding-top: 8px;
+                  border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .movement-label { font-size: 10px; font-weight: 700; color: var(--muted);
+                    text-transform: uppercase; margin-right: 4px; }
+  .move-item { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .move-team { color: var(--muted); font-weight: 600; }
+  .move-arrow.up   { color: var(--green); }
+  .move-arrow.down { color: var(--red); }
+  .move-vals { color: var(--text); }
+  .no-odds { font-size: 12px; color: var(--muted); font-style: italic; text-align: center; padding: 8px; }
+
+  /* ── Value indicators ── */
+  .value-strip {
+    background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25);
+    border-radius: 8px; padding: 8px 12px; font-size: 12px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  }
+  .value-tag { font-weight: 700; color: var(--amber); }
+  .value-item { color: var(--text); }
+
+  /* ── Empty / Loading ── */
+  .center-msg { text-align: center; padding: 80px 24px; color: var(--muted); font-size: 15px; }
+  .spinner {
+    width: 32px; height: 32px; border: 3px solid var(--border);
+    border-top-color: var(--blue); border-radius: 50%;
+    animation: spin .8s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Section divider ── */
+  .section-divider {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--muted); padding: 0 4px;
+    margin-bottom: 4px;
+  }
+
+  @media (max-width: 720px) {
+    .games-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .header-right { align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <h1>⚾ MLB <span>Betting Analyzer</span></h1>
+    <div class="header-date" id="header-date"></div>
+  </div>
+  <div class="header-right">
+    <div class="header-meta">Last updated: <span id="last-updated">—</span></div>
+    <div class="header-meta">Odds updated: <span id="odds-updated">—</span></div>
+    <div class="header-meta" style="margin-top:4px">Next refresh in <span id="countdown">15:00</span></div>
+    <div class="refresh-bar"><div class="refresh-fill" id="refresh-fill" style="width:100%"></div></div>
+  </div>
+</header>
+
+<div class="alerts-section" id="alerts-section" style="display:none">
+  <div class="alerts-title">⚡ Value Alerts — Line Discrepancy ≥ 3pp Across Books</div>
+  <div class="alerts-grid" id="alerts-grid"></div>
+</div>
+
+<div class="games-section">
+  <div class="games-grid" id="games-grid">
+    <div class="center-msg"><div class="spinner"></div>Loading game data…</div>
+  </div>
+</div>
+
+<script>
+const REFRESH_MS = 15 * 60 * 1000;
+let nextRefresh  = Date.now() + REFRESH_MS;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function fmtOdds(n) {
+  if (n == null) return '—';
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
+function fmtProb(p) {
+  if (p == null) return '—';
+  return `${(p * 100).toFixed(1)}%`;
+}
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function fmtUpdated(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function statColor(stat, val) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return 'neutral';
+  const thresholds = {
+    era:  [[3.00,'good'],[4.00,'ok'],[Infinity,'bad']],
+    whip: [[1.15,'good'],[1.35,'ok'],[Infinity,'bad']],
+    k9:   [[9.0,'good'],[7.0,'ok'],[0,'bad']],
+    bb9:  [[2.5,'good'],[3.5,'ok'],[Infinity,'bad']],
+    hr9:  [[1.0,'good'],[1.4,'ok'],[Infinity,'bad']]
+  };
+  const rules = thresholds[stat];
+  if (!rules) return 'neutral';
+  for (const [thresh, cls] of rules) {
+    if (stat === 'k9') { if (n >= thresh) return cls; }
+    else               { if (n <= thresh) return cls; }
+  }
+  return 'neutral';
+}
+
+function streakBadge(streak) {
+  if (!streak) return '';
+  const win = streak.startsWith('W');
+  return `<span class="streak-badge ${win ? 'win' : 'loss'}">${streak}</span>`;
+}
+
+function pitcherPanel(team, side) {
+  const p = team.probablePitcher;
+  const s = team.pitcherStats;
+  const isHome = side === 'home';
+  const align  = isHome ? 'home' : '';
+
+  if (!p) {
+    return `
+      <div class="pitcher-panel ${align}">
+        <div class="pitcher-label">${team.abbr} Pitcher</div>
+        <div class="pitcher-tbd">TBD</div>
+      </div>`;
+  }
+
+  const record  = s ? `${s.wins ?? 0}-${s.losses ?? 0}` : '';
+  const statsHtml = s ? `
+    <div class="stats-grid">
+      ${statBox('ERA',  s.era,  'era')}
+      ${statBox('WHIP', s.whip, 'whip')}
+      ${statBox('K/9',  s.k9,   'k9')}
+      ${statBox('BB/9', s.bb9,  'bb9')}
+    </div>
+    <div class="stats-grid" style="margin-top:4px">
+      ${statBox('HR/9', s.hr9, 'hr9')}
+      ${statBox('AVG',  s.avg, 'neutral')}
+      ${statBox('OPS',  s.ops, 'neutral')}
+      ${statBox('K/BB', s.kbb, 'neutral')}
+    </div>` : '';
+
+  return `
+    <div class="pitcher-panel ${align}">
+      <div class="pitcher-label">${team.abbr} SP</div>
+      <div class="pitcher-name">${p.name}</div>
+      <div class="pitcher-record">${record}${s?.gs ? ` &bull; ${s.gs} GS` : ''}</div>
+      ${statsHtml}
+    </div>`;
+}
+
+function statBox(label, val, colorKey) {
+  const display = val ?? '—';
+  const cls = typeof colorKey === 'string' && colorKey !== 'neutral'
+    ? statColor(colorKey, val)
+    : 'neutral';
+  return `
+    <div class="stat-box">
+      <div class="stat-label">${label}</div>
+      <div class="stat-val ${cls}">${display}</div>
+    </div>`;
+}
+
+function trendsPanel(team) {
+  const r  = team.record;
+  const rc = team.recent;
+  const streak = r?.streak || '';
+  const l10w   = r?.last10?.w ?? rc?.last10?.w ?? '—';
+  const l10l   = r?.last10?.l ?? rc?.last10?.l ?? '—';
+  const homeRec = r ? `${r.home.w}-${r.home.l}` : '—';
+  const awayRec = r ? `${r.away.w}-${r.away.l}` : '—';
+
+  return `
+    <div class="trend-panel">
+      <div class="trend-header">
+        <span class="trend-team">${team.abbr} Trends</span>
+        ${streakBadge(streak)}
+      </div>
+      <div class="trend-stats">
+        <div class="trend-row">
+          <span class="trend-key">Record</span>
+          <span class="trend-val">${r ? `${r.wins}-${r.losses}` : '—'}</span>
+        </div>
+        <div class="trend-row">
+          <span class="trend-key">Last 10</span>
+          <span class="trend-val">${l10w}-${l10l}</span>
+        </div>
+        <div class="trend-row">
+          <span class="trend-key">Home</span>
+          <span class="trend-val">${homeRec}</span>
+        </div>
+        <div class="trend-row">
+          <span class="trend-key">Away</span>
+          <span class="trend-val">${awayRec}</span>
+        </div>
+        <div class="trend-row">
+          <span class="trend-key">RS/G (L10)</span>
+          <span class="trend-val">${rc?.rsPerGame ?? '—'}</span>
+        </div>
+        <div class="trend-row">
+          <span class="trend-key">RA/G (L10)</span>
+          <span class="trend-val">${rc?.raPerGame ?? '—'}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bullpenPanel(team) {
+  const b = team.bullpen;
+  const fl = b?.fatigueLevel || 'unknown';
+  const relievers = b?.relievers || [];
+
+  const dotsHtml = (r) => {
+    const dots = [1, 2, 3].map(day => {
+      const used = r.appearances >= day;
+      return `<div class="dot ${used ? (r.consecutive ? 'consec' : 'used') : 'rested'}" title="Day ${day}"></div>`;
+    }).join('');
+    return `<div class="reliever-dots">${dots}</div>`;
+  };
+
+  return `
+    <div class="bullpen-panel">
+      <div class="bullpen-header">
+        <span class="bullpen-label">${team.abbr} Bullpen</span>
+        <span class="fatigue-badge ${fl}">${fl === 'unknown' ? 'N/A' : fl.toUpperCase()}</span>
+      </div>
+      ${relievers.length === 0
+        ? `<div class="no-relievers">No recent usage data</div>`
+        : `<div class="reliever-list">
+            ${relievers.map(r => `
+              <div class="reliever-item">
+                <span class="reliever-name">${r.name.split(' ').pop()}</span>
+                ${dotsHtml(r)}
+              </div>`).join('')}
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:5px">
+            ● Appeared last 3 days &nbsp; ○ Rested &nbsp; <span style="color:var(--amber)">●</span> Consecutive days
+          </div>`}
+    </div>`;
+}
+
+function oddsSection(game, oddsUpdated) {
+  const odds = game.odds;
+  if (!odds) {
+    return `<div class="odds-section"><div class="no-odds">Odds unavailable</div></div>`;
+  }
+
+  const books = odds.books;
+  const bookKeys = Object.keys(books);
+  if (!bookKeys.length) {
+    return `<div class="odds-section"><div class="no-odds">No odds data from books</div></div>`;
+  }
+
+  // Find best ML for each side
+  const awayMls = bookKeys.map(k => books[k].ml.away).filter(n => n != null);
+  const homeMls = bookKeys.map(k => books[k].ml.home).filter(n => n != null);
+  const bestAway = awayMls.length ? Math.max(...awayMls) : null; // highest = best for bettor
+  const bestHome = homeMls.length ? Math.max(...homeMls) : null;
+
+  const rows = bookKeys.map(key => {
+    const b = books[key];
+    const awayML = b.ml.away;
+    const homeML = b.ml.home;
+    const awayBest = awayML === bestAway ? 'best' : '';
+    const homeBest = homeML === bestHome ? 'best' : '';
+    const rl = b.rl.awayLine != null ? `${b.rl.awayLine > 0 ? '+' : ''}${b.rl.awayLine}` : '—';
+    return `
+      <tr>
+        <td class="book-name">${b.title}</td>
+        <td><span class="odds-val ${awayBest}">${fmtOdds(awayML)}</span></td>
+        <td><span class="odds-val ${homeBest}">${fmtOdds(homeML)}</span></td>
+        <td style="color:var(--muted);font-size:11px">
+          ${rl} <span style="color:var(--text)">${fmtOdds(b.rl.awayOdds)}</span>
+          / <span style="color:var(--text)">${fmtOdds(b.rl.homeOdds)}</span>
+        </td>
+        <td style="color:var(--muted);font-size:11px">
+          ${b.total.line ?? '—'} &nbsp;
+          <span style="color:var(--text)">${fmtOdds(b.total.overOdds)}</span>
+          / <span style="color:var(--text)">${fmtOdds(b.total.underOdds)}</span>
+        </td>
+      </tr>`;
+  }).join('');
+
+  // Consensus row
+  const cons = odds.consensus;
+  const consensusRow = `
+    <tr style="border-top:1px solid var(--border);font-size:11px;color:var(--muted)">
+      <td class="book-name" style="font-weight:700;color:var(--muted)">Implied %</td>
+      <td><span style="color:var(--text)">${fmtProb(cons.awayProb)}</span></td>
+      <td><span style="color:var(--text)">${fmtProb(cons.homeProb)}</span></td>
+      <td>—</td>
+      <td>${cons.avgTotal ?? '—'}</td>
+    </tr>`;
+
+  // Line movement
+  const mv = game.movement;
+  let movHtml = '';
+  if (mv) {
+    const awayDir = mv.away.moved ? (mv.away.current > mv.away.open ? '▲' : '▼') : '→';
+    const homeDir = mv.home.moved ? (mv.home.current > mv.home.open ? '▲' : '▼') : '→';
+    const awayCls = mv.away.moved ? (mv.away.current > mv.away.open ? 'up' : 'down') : '';
+    const homeCls = mv.home.moved ? (mv.home.current > mv.home.open ? 'up' : 'down') : '';
+    movHtml = `
+      <div class="movement-row">
+        <span class="movement-label">Line Movement</span>
+        <div class="move-item">
+          <span class="move-team">${game.away.abbr}</span>
+          <span class="move-arrow ${awayCls}">${awayDir}</span>
+          <span class="move-vals">${fmtOdds(mv.away.open)} → ${fmtOdds(mv.away.current)}</span>
+        </div>
+        <div class="move-item">
+          <span class="move-team">${game.home.abbr}</span>
+          <span class="move-arrow ${homeCls}">${homeDir}</span>
+          <span class="move-vals">${fmtOdds(mv.home.open)} → ${fmtOdds(mv.home.current)}</span>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="odds-section">
+      <div class="odds-header">
+        <span class="odds-label">Live Odds</span>
+        <span class="odds-updated">Updated ${fmtUpdated(oddsUpdated)}</span>
+      </div>
+      <table class="odds-table">
+        <thead>
+          <tr>
+            <th class="book-col">Book</th>
+            <th>${game.away.abbr} ML</th>
+            <th>${game.home.abbr} ML</th>
+            <th>Run Line</th>
+            <th>O/U</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+          ${consensusRow}
+        </tbody>
+      </table>
+      ${movHtml}
+    </div>`;
+}
+
+function valueStrip(game) {
+  const cons = game.odds?.consensus;
+  if (!cons || !cons.hasValue) return '';
+  const items = [];
+  if (cons.awaySpread >= 0.03) {
+    items.push(`<span class="value-item">${game.away.abbr} spread: ${(cons.awaySpread * 100).toFixed(1)}pp — shop for best price</span>`);
+  }
+  if (cons.homeSpread >= 0.03) {
+    items.push(`<span class="value-item">${game.home.abbr} spread: ${(cons.homeSpread * 100).toFixed(1)}pp — shop for best price</span>`);
+  }
+  return `
+    <div class="value-strip">
+      <span class="value-tag">⚡ VALUE</span>
+      ${items.join('<span style="color:var(--border)">|</span>')}
+    </div>`;
+}
+
+function weatherStrip(w, venue) {
+  if (!w) return `<span class="venue-name">${venue?.name || ''}</span>`;
+  const flags = [];
+  if (w.domeOrRoof)   flags.push(`<span class="weather-flag dome">DOME</span>`);
+  else if (w.strongWind) flags.push(`<span class="weather-flag wind">WIND ${w.windSpeed}mph ${w.windDir}</span>`);
+  if (w.rainRisk)     flags.push(`<span class="weather-flag rain">RAIN ${w.precipProb}%</span>`);
+
+  return `
+    <span class="venue-name">${venue?.name || ''}</span>
+    <div class="weather-info">
+      <span class="weather-icon">${w.icon}</span>
+      <span class="weather-text">${w.temp}°F · ${w.windSpeed}mph ${w.windDir} · ${w.condition}</span>
+      ${flags.join('')}
+    </div>`;
+}
+
+// ── Card renderer ─────────────────────────────────────────────────────────────
+function renderCard(game, oddsUpdated) {
+  const isLive    = game.statusCode === 'I' || game.status?.toLowerCase().includes('progress');
+  const isFinal   = game.statusCode === 'F' || game.status?.toLowerCase().includes('final');
+  const isPreGame = game.status?.toLowerCase().includes('pre-game') || game.status?.toLowerCase().includes('warmup');
+  const statusCls = isLive ? 'live' : isFinal ? 'final' : isPreGame ? 'pregame' : 'scheduled';
+
+  const statusLabel = isLive
+    ? `LIVE${game.inning ? ` · ${game.inningHalf === 'Top' ? '▲' : '▼'}${game.inning}` : ''}`
+    : isFinal ? 'FINAL'
+    : isPreGame ? 'PRE-GAME'
+    : fmtTime(game.gameDate);
+
+  const scoreAway = game.away.score != null ? `<div class="team-score">${game.away.score}</div>` : '';
+  const scoreHome = game.home.score != null ? `<div class="team-score">${game.home.score}</div>` : '';
+
+  const park = game.park;
+
+  return `
+    <div class="game-card ${statusCls}">
+      <div class="card-top">
+        <div class="matchup">
+          <div class="team-name">
+            <div class="team-abbr">${game.away.abbr}</div>
+            ${scoreAway}
+          </div>
+          <span class="at-sign">@</span>
+          <div class="team-name">
+            <div class="team-abbr">${game.home.abbr}</div>
+            ${scoreHome}
+          </div>
+        </div>
+        <div class="game-meta">
+          <span class="status-badge ${statusCls}">${statusLabel}</span>
+          ${!isLive && !isFinal ? `<span class="game-time">${fmtTime(game.gameDate)}</span>` : ''}
+        </div>
+      </div>
+
+      <div class="venue-strip">
+        <div class="venue-left">
+          ${weatherStrip(game.weather, game.venue)}
+        </div>
+        <div>
+          ${park ? `<span class="park-badge ${park.cls}" title="Run Factor: ${park.runFactor}x">${park.label} (${park.runFactor}x)</span>` : ''}
+        </div>
+      </div>
+
+      <div class="card-body">
+        ${valueStrip(game)}
+
+        <div>
+          <div class="section-divider">Starting Pitchers</div>
+          <div class="pitchers-row">
+            ${pitcherPanel(game.away, 'away')}
+            <div class="vs-col">VS</div>
+            ${pitcherPanel(game.home, 'home')}
+          </div>
+        </div>
+
+        <div>
+          <div class="section-divider">Team Trends</div>
+          <div class="trends-row">
+            ${trendsPanel(game.away)}
+            ${trendsPanel(game.home)}
+          </div>
+        </div>
+
+        <div>
+          <div class="section-divider">Bullpen Usage (Last 3 Days)</div>
+          <div class="bullpen-row">
+            ${bullpenPanel(game.away)}
+            ${bullpenPanel(game.home)}
+          </div>
+        </div>
+
+        ${oddsSection(game, oddsUpdated)}
+      </div>
+    </div>`;
+}
+
+// ── Alerts renderer ───────────────────────────────────────────────────────────
+function renderAlerts(games) {
+  const alerts = [];
+  for (const g of games) {
+    const cons = g.odds?.consensus;
+    if (!cons?.hasValue) continue;
+    if (cons.awaySpread >= 0.03) {
+      alerts.push({ team: g.away.abbr, spread: cons.awaySpread, game: `${g.away.abbr}@${g.home.abbr}` });
+    }
+    if (cons.homeSpread >= 0.03) {
+      alerts.push({ team: g.home.abbr, spread: cons.homeSpread, game: `${g.away.abbr}@${g.home.abbr}` });
+    }
+  }
+
+  const section = document.getElementById('alerts-section');
+  const grid    = document.getElementById('alerts-grid');
+
+  if (!alerts.length) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  grid.innerHTML = alerts.map(a => `
+    <div class="alert-pill">
+      <span class="pill-tag">${a.game}</span>
+      <span>${a.team}: ${(a.spread * 100).toFixed(1)}pp spread across books</span>
+    </div>`).join('');
+}
+
+// ── Main fetch & render ───────────────────────────────────────────────────────
+async function loadGames() {
+  try {
+    const res  = await fetch('/api/games');
+    const data = await res.json();
+
+    document.getElementById('last-updated').textContent = fmtUpdated(data.lastUpdated);
+    document.getElementById('odds-updated').textContent = fmtUpdated(data.oddsUpdated);
+
+    const grid = document.getElementById('games-grid');
+
+    if (!data.games || data.games.length === 0) {
+      grid.innerHTML = `<div class="center-msg">No MLB games scheduled today. Check back tomorrow!</div>`;
+      document.getElementById('alerts-section').style.display = 'none';
+      return;
+    }
+
+    // Sort: live first, then by time
+    const sorted = [...data.games].sort((a, b) => {
+      const aLive = a.statusCode === 'I' ? 0 : a.statusCode === 'F' ? 2 : 1;
+      const bLive = b.statusCode === 'I' ? 0 : b.statusCode === 'F' ? 2 : 1;
+      if (aLive !== bLive) return aLive - bLive;
+      return new Date(a.gameDate) - new Date(b.gameDate);
+    });
+
+    grid.innerHTML = sorted.map(g => renderCard(g, data.oddsUpdated)).join('');
+    renderAlerts(sorted);
+  } catch (e) {
+    console.error('Load error:', e);
+  }
+}
+
+// ── Countdown timer ───────────────────────────────────────────────────────────
+function updateCountdown() {
+  const remaining = Math.max(0, nextRefresh - Date.now());
+  const m = Math.floor(remaining / 60000);
+  const s = Math.floor((remaining % 60000) / 1000);
+  document.getElementById('countdown').textContent =
+    `${m}:${String(s).padStart(2, '0')}`;
+  const pct = (remaining / REFRESH_MS) * 100;
+  document.getElementById('refresh-fill').style.width = `${pct}%`;
+}
+
+// ── Header date ───────────────────────────────────────────────────────────────
+document.getElementById('header-date').textContent =
+  new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+loadGames();
+setInterval(() => {
+  nextRefresh = Date.now() + REFRESH_MS;
+  loadGames();
+}, REFRESH_MS);
+setInterval(updateCountdown, 1000);
+updateCountdown();
+</script>
+</body>
+</html>
