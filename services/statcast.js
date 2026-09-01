@@ -43,7 +43,8 @@ async function refreshStatcast() {
 
   const url =
     `https://baseballsavant.mlb.com/leaderboard/custom?year=${SEASON}&type=pitcher` +
-    `&filter=&min=25&selections=player_id%2Ck_percent%2Cbb_percent%2Cwhiff_percent%2Cswing_percent&csv=true`;
+    `&filter=&min=25&selections=player_id%2Ck_percent%2Cbb_percent%2Cwhiff_percent%2Cswing_percent` +
+    `%2Cxera%2Chard_hit_percent%2Cbarrel_batted_rate&csv=true`;
 
   try {
     console.log('Fetching Baseball Savant statcast data...');
@@ -91,7 +92,15 @@ async function refreshStatcast() {
       const swStr = (whiffPct != null && swingPct != null) ? whiffPct * swingPct : null;
       const xKPct = swStr != null ? Math.min(0.45, 2.7 * swStr) : null;
 
-      map[String(id)] = { kPct, bbPct, whiffPct, swingPct, swStr, xKPct };
+      // Quality-of-contact metrics (may be absent in older Savant exports — parse gracefully)
+      const xERAraw      = parseFloat(row['xera']);
+      const hardHitRaw   = parseFloat(row['hard_hit_percent']);
+      const barrelRaw    = parseFloat(row['barrel_batted_rate']);
+      const xERA         = isNaN(xERAraw)    ? null : xERAraw;
+      const hardHitPct   = isNaN(hardHitRaw) ? null : hardHitRaw / 100;
+      const barrelPct    = isNaN(barrelRaw)  ? null : barrelRaw  / 100;
+
+      map[String(id)] = { kPct, bbPct, whiffPct, swingPct, swStr, xKPct, xERA, hardHitPct, barrelPct };
     }
 
     _cache = { map, date: today };

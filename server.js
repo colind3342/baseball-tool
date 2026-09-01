@@ -560,8 +560,10 @@ app.get('/api/strikeout-props', async (req, res) => {
 app.get('/api/game-model', (req, res) => {
   if (!cache.games.length) return res.json({ error: 'No games loaded yet', results: [] });
 
+  const statcastMap = getStatcastMap();
+
   const results = cache.games.map(game => {
-    const model = calcGameModel(game);
+    const model = calcGameModel(game, statcastMap);
 
     // Find the highest-|EV| opportunity across ML and O/U
     const bets = [

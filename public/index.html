@@ -588,6 +588,30 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .gm-prob-away { color: var(--amber); }
 .gm-prob-home { color: var(--navy); }
 
+/* SP quality strip */
+.gm-sp-strip {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  gap: 8px; align-items: center; margin-bottom: 10px;
+  background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px;
+}
+.gm-sp-side { display: flex; flex-direction: column; gap: 3px; }
+.gm-sp-side.right { align-items: flex-end; text-align: right; }
+.gm-sp-name { font-size: 12px; font-weight: 800; color: var(--navy); }
+.gm-sp-metrics { display: flex; gap: 5px; flex-wrap: wrap; }
+.gm-sp-side.right .gm-sp-metrics { justify-content: flex-end; }
+.gm-sp-chip {
+  font-size: 10px; padding: 1px 6px; border-radius: 3px;
+  background: var(--card); border: 1px solid var(--border); color: var(--muted);
+}
+.gm-sp-chip b { color: var(--navy); }
+.gm-sp-chip.statcast { border-color: rgba(14,116,144,.2); background: rgba(14,116,144,.05); }
+.gm-sp-chip.statcast b { color: var(--teal); }
+.gm-sp-chip.good b { color: var(--green); }
+.gm-sp-chip.bad  b { color: var(--red); }
+.gm-sp-src { font-size: 9px; color: var(--muted); font-style: italic; }
+.gm-vs-sep { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; }
+
 /* Exp runs row */
 .gm-runs-row {
   display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 10px;
@@ -1338,6 +1362,55 @@ function renderBetRow(label, teamLabel, modelProb, impliedProb, ev, bestOdds) {
     </tr>`;
 }
 
+function spMetricCls(val, thresholds) {
+  // thresholds: [goodBelow, badAbove] — e.g. ERA: good < 3.50, bad > 4.50
+  if (val == null) return '';
+  if (val <= thresholds[0]) return 'good';
+  if (val >= thresholds[1]) return 'bad';
+  return '';
+}
+
+function renderSPSide(spName, spq, side) {
+  if (!spName && !spq?.era) {
+    return `<div class="gm-sp-side ${side === 'home' ? 'right' : ''}">
+      <div class="gm-sp-name">TBD</div></div>`;
+  }
+
+  const shortName = spName ? spName.split(' ').slice(-1)[0] : '—';
+  const eraCls  = spMetricCls(spq?.era,  [3.50, 4.50]);
+  const fipCls  = spMetricCls(spq?.fip,  [3.40, 4.40]);
+  const xeraCls = spMetricCls(spq?.xERA, [3.30, 4.30]);
+
+  const chips = [
+    spq?.era  != null ? `<span class="gm-sp-chip ${eraCls}">ERA <b>${parseFloat(spq.era).toFixed(2)}</b></span>` : '',
+    spq?.fip  != null ? `<span class="gm-sp-chip ${fipCls}">FIP <b>${spq.fip.toFixed(2)}</b></span>` : '',
+    spq?.xERA != null ? `<span class="gm-sp-chip statcast ${xeraCls}">xERA <b>${spq.xERA.toFixed(2)}</b></span>` : '',
+    spq?.hardHitPct != null ? `<span class="gm-sp-chip statcast">HH% <b>${(spq.hardHitPct*100).toFixed(1)}%</b></span>` : '',
+    spq?.barrelPct  != null ? `<span class="gm-sp-chip statcast">Brl% <b>${(spq.barrelPct*100).toFixed(1)}%</b></span>` : ''
+  ].filter(Boolean).join('');
+
+  const src = spq?.source && spq.source !== 'ERA only' && spq.source !== 'none'
+    ? `<span class="gm-sp-src">model: ${spq.source}</span>` : '';
+
+  return `
+    <div class="gm-sp-side ${side === 'home' ? 'right' : ''}">
+      <div class="gm-sp-name">${shortName}</div>
+      <div class="gm-sp-metrics">${chips || '<span class="gm-sp-chip">No data</span>'}</div>
+      ${src}
+    </div>`;
+}
+
+function renderSPStrip(g, m) {
+  const awaySPQ = m.spQuality?.away || null;
+  const homeSPQ = m.spQuality?.home || null;
+  return `
+    <div class="gm-sp-strip">
+      ${renderSPSide(g.away.probablePitcher?.name, awaySPQ, 'away')}
+      <div class="gm-vs-sep">vs</div>
+      ${renderSPSide(g.home.probablePitcher?.name, homeSPQ, 'home')}
+    </div>`;
+}
+
 function renderModelCard(g) {
   const m = g.model;
   const { cls, label } = gameStatusInfo(g);
@@ -1403,6 +1476,9 @@ function renderModelCard(g) {
         </div>
       </div>
 
+      <!-- SP Quality strip -->
+      ${renderSPStrip(g, m)}
+
       <!-- Expected runs -->
       <div class="gm-runs-row">
         <span class="gm-runs-label">Exp runs</span>
@@ -1443,8 +1519,8 @@ function renderModelCard(g) {
       <div class="gm-quality">
         <span class="gm-quality-label">Data:</span>
         ${qdots}
-        <span class="gm-quality-label" style="margin-left:2px">${m.qualityScore}/7</span>
-        ${m.qualityScore <= 4 ? `<span style="font-size:10px;color:var(--amber)">(low confidence)</span>` : ''}
+        <span class="gm-quality-label" style="margin-left:2px">${m.qualityScore}/9</span>
+        ${m.qualityScore <= 5 ? `<span style="font-size:10px;color:var(--amber)">(low confidence)</span>` : ''}
       </div>
     </div>`;
 }

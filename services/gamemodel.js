@@ -3,10 +3,79 @@
 const { oddsToImpliedProb } = require('./odds');
 
 const LG_AVG_ERA = 4.20;
+const LG_AVG_FIP = 4.20;
 const LG_AVG_OPS = 0.720;
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function sigmoid(x)       { return 1 / (1 + Math.exp(-x)); }
+
+/**
+ * Fielding Independent Pitching — removes defense from ERA.
+ * Formula: (13×HR/9 + 3×BB/9 − 2×K/9) / 9 + 3.10
+ * Requires K/9, BB/9, HR/9 and at least 30 IP to be meaningful.
+ */
+function calcFIP(k9, bb9, hr9, ip) {
+  const k  = parseFloat(k9);
+  const bb = parseFloat(bb9);
+  const hr = parseFloat(hr9);
+  const innings = parseFloat(ip);
+  if (isNaN(k) || isNaN(bb) || isNaN(hr) || isNaN(innings) || innings < 30) return null;
+  return (13 * hr + 3 * bb - 2 * k) / 9 + 3.10;
+}
+
+/**
+ * Composite SP quality ERA — blends xERA, FIP, and ERA by confidence weight.
+ * xERA:  stabilizes fastest (~50 IP), removes defense and batted-ball luck
+ * FIP:   stabilizes in ~60 IP, removes defense entirely
+ * ERA:   slowest to stabilize, but reflects actual results
+ *
+ * Also returns a contact quality penalty: high barrel/hard-hit rate bumps
+ * the composite ERA upward (pitcher is giving up dangerous contact even if
+ * results haven't shown yet).
+ *
+ * @param {object} pitcherStats — MLB Stats API pitcher stats
+ * @param {object|null} sc      — Statcast data for this pitcher
+ * @returns {{ composite, fip, xERA, era, contactAdj, source }}
+ */
+function spQuality(pitcherStats, sc) {
+  const era = parseFloat(pitcherStats?.era) || null;
+  const fip = calcFIP(pitcherStats?.k9, pitcherStats?.bb9, pitcherStats?.hr9, pitcherStats?.ip);
+  const xERA = sc?.xERA ?? null;
+
+  // Contact quality adjustment: barrel% above league avg (8.5%) adds ~0.15 ERA per point
+  const LG_BARREL = 0.085;
+  const LG_HARDHIT = 0.375;
+  const barrelAdj  = sc?.barrelPct  != null ? (sc.barrelPct  - LG_BARREL)  * 3.5 : 0;
+  const hardHitAdj = sc?.hardHitPct != null ? (sc.hardHitPct - LG_HARDHIT) * 1.2 : 0;
+  const contactAdj = clamp(barrelAdj + hardHitAdj, -0.6, 0.8);
+
+  let composite, source;
+  if (xERA != null && fip != null && era != null) {
+    composite = 0.45 * xERA + 0.35 * fip + 0.20 * era;
+    source    = 'xERA+FIP+ERA';
+  } else if (xERA != null && era != null) {
+    composite = 0.60 * xERA + 0.40 * era;
+    source    = 'xERA+ERA';
+  } else if (fip != null && era != null) {
+    composite = 0.55 * fip + 0.45 * era;
+    source    = 'FIP+ERA';
+  } else if (era != null) {
+    composite = era;
+    source    = 'ERA only';
+  } else {
+    composite = null;
+    source    = 'none';
+  }
+
+  const adjusted = composite != null ? composite + contactAdj : null;
+
+  return {
+    composite: adjusted, raw: composite,
+    fip, xERA, era, contactAdj, source,
+    hardHitPct: sc?.hardHitPct ?? null,
+    barrelPct:  sc?.barrelPct  ?? null
+  };
+}
 
 // Standard normal CDF — Abramowitz & Stegun approximation (|error| < 7.5e-8)
 function normalCDF(z) {
@@ -21,15 +90,15 @@ const fatigueNum = level => FATIGUE_SCORE[level] ?? 0.5;
 
 /**
  * Expected runs scored by one side.
- * @param {number} ops       — offensive OPS
- * @param {number} spERA     — opposing starter ERA
- * @param {number} teamERA   — opposing overall team pitching ERA
- * @param {number} parkFactor — run factor (1.0 = neutral)
+ * @param {number} ops           — offensive OPS
+ * @param {number} spComposite   — opposing SP composite ERA (xERA/FIP/ERA blend)
+ * @param {number} teamERA       — opposing overall team pitching ERA
+ * @param {number} parkFactor    — run factor (1.0 = neutral)
  */
-function expectedRuns(ops, spERA, teamERA, parkFactor) {
+function expectedRuns(ops, spComposite, teamERA, parkFactor) {
   const offBase = Math.max(0.5, (ops - 0.300) * 10.5);
-  const spFact  = clamp(LG_AVG_ERA / (spERA || LG_AVG_ERA), 0.55, 1.65);
-  const penFact = clamp(LG_AVG_ERA / (teamERA || LG_AVG_ERA), 0.55, 1.65);
+  const spFact  = clamp(LG_AVG_ERA / (spComposite || LG_AVG_ERA), 0.50, 1.70);
+  const penFact = clamp(LG_AVG_ERA / (teamERA     || LG_AVG_ERA), 0.55, 1.65);
   return offBase * (0.65 * spFact + 0.35 * penFact) * (parkFactor || 1.0);
 }
 
@@ -53,15 +122,19 @@ function calcEV(modelProb, bestOdds) {
 /**
  * Run the full game model for one game from cache.games.
  *
+ * @param {object} game        — enriched game object from cache.games
+ * @param {object} statcastMap — map of pitcher MLBAM id → Statcast data
+ *
  * Returns:
  *   homeWinProb, awayWinProb, homeExpRuns, awayExpRuns, totalExp, ouLine,
  *   overProb, underProb, homeCoversProb, awayCoversProb,
  *   ml:  { home: EVResult, away: EVResult },
  *   ou:  { over: EVResult, under: EVResult },
+ *   spQuality: { home: SPQuality, away: SPQuality },
  *   factors: [{ label, dir, magnitude }],
- *   quality: { dot fields }, qualityScore (0–7)
+ *   quality: { dot fields }, qualityScore (0–8)
  */
-function calcGameModel(game) {
+function calcGameModel(game, statcastMap = {}) {
   // ── Record data ──────────────────────────────────────────────────────────────
   const homeRec = game.home.record;
   const awayRec = game.away.record;
@@ -83,11 +156,25 @@ function calcGameModel(game) {
   const homeHomeP  = homeHomeN > 0 ? (homeRec?.home?.w ?? 0) / homeHomeN : null;
   const awayAwayP  = awayAwayN > 0 ? (awayRec?.away?.w ?? 0) / awayAwayN : null;
 
-  // ── Pitcher data ─────────────────────────────────────────────────────────────
-  const homeSpERA = parseFloat(game.home.pitcherStats?.era) || null;
-  const awaySpERA = parseFloat(game.away.pitcherStats?.era) || null;
-  const homeSpK9  = parseFloat(game.home.pitcherStats?.k9)  || null;
-  const awaySpK9  = parseFloat(game.away.pitcherStats?.k9)  || null;
+  // ── Pitcher data + Statcast quality ──────────────────────────────────────────
+  const homeSPId = String(game.home.probablePitcher?.id || '');
+  const awaySPId = String(game.away.probablePitcher?.id || '');
+  const homeSC   = statcastMap[homeSPId] || null;
+  const awaySC   = statcastMap[awaySPId] || null;
+
+  const homeSpQ  = spQuality(game.home.pitcherStats, homeSC);
+  const awaySpQ  = spQuality(game.away.pitcherStats, awaySC);
+
+  // Composite ERA (FIP/xERA/ERA blend) — falls back to league avg if no data
+  const homeSpERA = homeSpQ.composite ?? null;
+  const awaySpERA = awaySpQ.composite ?? null;
+
+  // Raw ERA still used for factor labels so the user sees recognizable numbers
+  const homeSpERARaw = homeSpQ.era ?? null;
+  const awaySpERARaw = awaySpQ.era ?? null;
+
+  const homeSpK9  = parseFloat(game.home.pitcherStats?.k9) || null;
+  const awaySpK9  = parseFloat(game.away.pitcherStats?.k9) || null;
 
   // ── Team data ────────────────────────────────────────────────────────────────
   const homeOPS    = parseFloat(game.home.teamStats?.hitting?.ops)  || null;
@@ -149,16 +236,22 @@ function calcGameModel(game) {
     }
   }
 
-  // β₄ — SP ERA differential (0.15): awaySpERA - homeSpERA → positive favors home
+  // β₄ — SP composite ERA differential (0.18): uses xERA/FIP/ERA blend
+  // Higher coefficient than raw ERA because composite is more signal, less noise
   {
-    const hERA = homeSpERA ?? LG_AVG_ERA;
-    const aERA = awaySpERA ?? LG_AVG_ERA;
-    const diff = aERA - hERA;
-    const c = 0.15 * diff;
+    const hComp = homeSpERA ?? LG_AVG_ERA;
+    const aComp = awaySpERA ?? LG_AVG_ERA;
+    const diff  = aComp - hComp; // positive = away composite ERA worse → favors home
+    const c     = 0.18 * diff;
     logit += c;
-    if (homeSpERA != null && awaySpERA != null && Math.abs(diff) >= 0.30) {
+    if (homeSpERA != null && awaySpERA != null && Math.abs(diff) >= 0.25) {
+      // Label shows composite metric for transparency
+      const hLabel = homeSpERARaw != null ? homeSpERARaw.toFixed(2) : '—';
+      const aLabel = awaySpERARaw != null ? awaySpERARaw.toFixed(2) : '—';
+      const srcTag = homeSpQ.source !== 'ERA only' || awaySpQ.source !== 'ERA only'
+        ? ` (${homeSpQ.source})` : '';
       factors.push({
-        label:     `SP ERA ${homeSpERA.toFixed(2)} vs ${awaySpERA.toFixed(2)}`,
+        label:     `SP quality ERA ${hLabel} vs ${aLabel}${srcTag}`,
         dir:       diff > 0 ? 'home' : 'away',
         magnitude: Math.abs(c)
       });
@@ -255,15 +348,16 @@ function calcGameModel(game) {
   const awayWinProb = 1 - homeWinProb;
 
   // ── Expected runs ─────────────────────────────────────────────────────────────
-  const hOPS   = homeOPS    ?? LG_AVG_OPS;
-  const aOPS   = awayOPS    ?? LG_AVG_OPS;
-  const hSpERA = homeSpERA  ?? LG_AVG_ERA;
-  const aSpERA = awaySpERA  ?? LG_AVG_ERA;
+  const hOPS   = homeOPS     ?? LG_AVG_OPS;
+  const aOPS   = awayOPS     ?? LG_AVG_OPS;
+  const hComp  = homeSpERA   ?? LG_AVG_ERA;   // home SP composite ERA (vs away batters)
+  const aComp  = awaySpERA   ?? LG_AVG_ERA;   // away SP composite ERA (vs home batters)
   const hTERA  = homeTeamERA ?? LG_AVG_ERA;
   const aTERA  = awayTeamERA ?? LG_AVG_ERA;
 
-  const homeExpRuns = expectedRuns(hOPS, aSpERA, aTERA, parkFactor);
-  const awayExpRuns = expectedRuns(aOPS, hSpERA, hTERA, parkFactor);
+  // Home scores against away SP; away scores against home SP
+  const homeExpRuns = expectedRuns(hOPS, aComp, aTERA, parkFactor);
+  const awayExpRuns = expectedRuns(aOPS, hComp, hTERA, parkFactor);
   const totalExp    = homeExpRuns + awayExpRuns;
 
   // Run differential: D = homeRuns - awayRuns ~ N(mu, σ²)
@@ -301,13 +395,15 @@ function calcGameModel(game) {
 
   // ── Data quality ──────────────────────────────────────────────────────────────
   const quality = {
-    homeRecord:   homeWinP != null,
-    awayRecord:   awayWinP != null,
-    homeSP:       homeSpERA != null,
-    awaySP:       awaySpERA != null,
-    homeOffense:  homeOPS != null,
-    awayOffense:  awayOPS != null,
-    odds:         books.length > 0
+    homeRecord:    homeWinP != null,
+    awayRecord:    awayWinP != null,
+    homeSP:        homeSpQ.era != null,
+    awaySP:        awaySpQ.era != null,
+    homeStatcast:  homeSC != null,
+    awayStatcast:  awaySC != null,
+    homeOffense:   homeOPS != null,
+    awayOffense:   awayOPS != null,
+    odds:          books.length > 0
   };
   const qualityScore = Object.values(quality).filter(Boolean).length;
 
@@ -327,6 +423,7 @@ function calcGameModel(game) {
     underProb,
     ml: { home: mlHome, away: mlAway },
     ou: { over: ouOver, under: ouUnder },
+    spQuality: { home: homeSpQ, away: awaySpQ },
     factors: factors.slice(0, 4),
     quality,
     qualityScore
