@@ -23,11 +23,13 @@ async function safeFetch(url) {
 async function getTodaySchedule() {
   const today = dateStr(0);
   const data = await safeFetch(
-    `${BASE}/schedule?sportId=1&date=${today}&hydrate=probablePitcher,linescore,team,venue`
+    `${BASE}/schedule?sportId=1&date=${today}&hydrate=probablePitcher,linescore,team,venue,officials`
   );
   if (!data?.dates?.length) return [];
 
-  return data.dates[0].games.map(g => ({
+  return data.dates[0].games.map(g => {
+    const hpUmp = (g.officials || []).find(o => o.officialType === 'Home Plate');
+    return {
     gamePk:   g.gamePk,
     gameDate: g.gameDate,
     status:   g.status.detailedState,
@@ -38,6 +40,7 @@ async function getTodaySchedule() {
       id:   g.venue?.id,
       name: g.venue?.name
     },
+    umpire: hpUmp ? { id: hpUmp.official?.id, name: hpUmp.official?.fullName } : null,
     away: {
       teamId:          g.teams.away.team.id,
       teamName:        g.teams.away.team.name,
@@ -56,7 +59,7 @@ async function getTodaySchedule() {
         ? { id: g.teams.home.probablePitcher.id, name: g.teams.home.probablePitcher.fullName }
         : null
     }
-  }));
+  };});
 }
 
 // ── Pitcher Stats ────────────────────────────────────────────────────────────

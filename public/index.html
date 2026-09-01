@@ -7,37 +7,51 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg:       #040e1c;
-  --surface:  #071828;
-  --card:     #0c2038;
-  --card2:    #112848;
-  --border:   #1a3a58;
-  --text:     #cce6f8;
-  --muted:    #4a88b8;
-  --blue:     #38bdf8;
-  --green:    #4ade80;
-  --red:      #f16060;
-  --amber:    #fbbf24;
-  --purple:   #c084fc;
-  --teal:     #34d399;
+  --bg:       #F4F1EC;
+  --surface:  #FFFFFF;
+  --card:     #FFFFFF;
+  --card2:    #F0EDE7;
+  --border:   #DDD8CF;
+  --text:     #1A1612;
+  --muted:    #6B6560;
+  --blue:     #1D4ED8;
+  --green:    #15803D;
+  --red:      #C8102E;
+  --amber:    #B45309;
+  --purple:   #6D28D9;
+  --teal:     #0E7490;
+  --navy:     #002147;
   --font:     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; min-height: 100vh; }
 
 /* ── Top nav ── */
 .nav {
-  background: linear-gradient(135deg, #071828 0%, #0c2440 100%);
-  border-bottom: 2px solid rgba(56,189,248,.35);
-  padding: 0 20px; height: 52px;
+  background: var(--navy);
+  border-bottom: 4px solid var(--red);
+  padding: 0 20px; height: 56px;
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 200;
+  box-shadow: 0 2px 12px rgba(0,0,0,.18);
 }
-.nav-brand { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
-.nav-brand span { color: var(--blue); }
+/* Baseball seam decorative strip above the red line */
+.nav::after {
+  content: '';
+  position: absolute;
+  bottom: -8px; left: 0; right: 0; height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px, transparent 6px,
+    rgba(200,16,46,.25) 6px, rgba(200,16,46,.25) 10px
+  );
+  pointer-events: none;
+}
+.nav-brand { font-size: 17px; font-weight: 900; color: #fff; letter-spacing: -.4px; }
+.nav-brand span { color: var(--red); }
 .nav-right { display: flex; align-items: center; gap: 16px; }
-.nav-meta { font-size: 11px; color: var(--muted); }
-.nav-meta b { color: var(--text); }
-.nav-date { font-size: 11px; color: var(--muted); }
+.nav-meta { font-size: 11px; color: rgba(255,255,255,.5); }
+.nav-meta b { color: rgba(255,255,255,.85); }
+.nav-date { font-size: 11px; color: rgba(255,255,255,.5); }
 
 /* ── Views ── */
 #view-list   { display: block; }
@@ -60,12 +74,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 /* ── Compact game tile ── */
 .game-tile {
   background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 14px; cursor: pointer; transition: border-color .15s, background .15s;
+  padding: 14px; cursor: pointer; transition: border-color .15s, box-shadow .15s;
   position: relative;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
 }
-.game-tile:hover { border-color: var(--blue); background: var(--card2); }
-.game-tile.live   { border-color: rgba(240,68,68,.5); }
-.game-tile.value  { border-color: rgba(245,158,11,.4); }
+.game-tile:hover { border-color: var(--red); box-shadow: 0 3px 12px rgba(200,16,46,.12); }
+.game-tile.live   { border-color: rgba(200,16,46,.5); border-left: 3px solid var(--red); }
+.game-tile.value  { border-color: rgba(180,83,9,.4); }
 
 .tile-status {
   display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
@@ -74,10 +89,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   padding: 2px 7px; border-radius: 20px;
 }
-.status-pill.live      { background: rgba(240,68,68,.2);  color: var(--red); animation: blink 1.5s infinite; }
-.status-pill.final     { background: rgba(90,116,148,.15); color: var(--muted); }
-.status-pill.scheduled { background: rgba(74,158,255,.15); color: var(--blue); }
-.status-pill.pregame   { background: rgba(245,158,11,.15); color: var(--amber); }
+.status-pill.live      { background: rgba(200,16,46,.12);  color: var(--red); animation: blink 1.5s infinite; border: 1px solid rgba(200,16,46,.25); }
+.status-pill.final     { background: rgba(107,101,96,.1);  color: var(--muted); border: 1px solid var(--border); }
+.status-pill.scheduled { background: rgba(29,78,216,.1);   color: var(--blue);  border: 1px solid rgba(29,78,216,.2); }
+.status-pill.pregame   { background: rgba(180,83,9,.1);    color: var(--amber); border: 1px solid rgba(180,83,9,.2); }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.5} }
 
 .tile-time { font-size: 11px; color: var(--muted); }
@@ -88,9 +103,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 }
 .tile-team { display: flex; flex-direction: column; gap: 1px; }
 .tile-team.home { align-items: flex-end; text-align: right; }
-.tile-abbr  { font-size: 20px; font-weight: 900; color: #fff; }
+.tile-abbr  { font-size: 20px; font-weight: 900; color: var(--navy); }
 .tile-name  { font-size: 10px; color: var(--muted); }
-.tile-score { font-size: 22px; font-weight: 900; color: var(--blue); }
+.tile-score { font-size: 22px; font-weight: 900; color: var(--navy); }
 .tile-at    { font-size: 11px; color: var(--muted); font-weight: 600; }
 
 .tile-pitchers {
@@ -118,26 +133,27 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
   font-size: 9px; font-weight: 700; text-transform: uppercase;
   padding: 2px 6px; border-radius: 4px; letter-spacing: .04em;
 }
-.badge.value   { background: rgba(245,158,11,.2); color: var(--amber); }
-.badge.hitter  { background: rgba(240,68,68,.15);  color: #f87171; }
-.badge.pitcher { background: rgba(45,212,191,.15); color: var(--teal); }
-.badge.neutral { background: rgba(90,116,148,.15); color: var(--muted); }
-.badge.wind    { background: rgba(74,158,255,.15); color: var(--blue); }
-.badge.rain    { background: rgba(240,68,68,.15);  color: var(--red); }
-.badge.live    { background: rgba(240,68,68,.2);   color: var(--red); }
+.badge.value   { background: rgba(180,83,9,.1);    color: var(--amber); border: 1px solid rgba(180,83,9,.2); }
+.badge.hitter  { background: rgba(200,16,46,.1);   color: var(--red);   border: 1px solid rgba(200,16,46,.2); }
+.badge.pitcher { background: rgba(14,116,144,.1);  color: var(--teal);  border: 1px solid rgba(14,116,144,.2); }
+.badge.neutral { background: rgba(107,101,96,.1);  color: var(--muted); border: 1px solid var(--border); }
+.badge.wind    { background: rgba(29,78,216,.1);   color: var(--blue);  border: 1px solid rgba(29,78,216,.2); }
+.badge.rain    { background: rgba(200,16,46,.1);   color: var(--red);   border: 1px solid rgba(200,16,46,.2); }
+.badge.live    { background: rgba(200,16,46,.1);   color: var(--red);   border: 1px solid rgba(200,16,46,.2); }
 
 /* ── Detail view ── */
 .detail-nav {
   padding: 12px 20px; display: flex; align-items: center; gap: 12px;
   border-bottom: 1px solid var(--border); background: var(--surface);
+  box-shadow: 0 1px 0 var(--border);
 }
 .back-btn {
   background: var(--card2); border: 1px solid var(--border); border-radius: 6px;
   padding: 5px 12px; color: var(--text); font-size: 12px; cursor: pointer;
   display: flex; align-items: center; gap: 5px; transition: border-color .15s;
 }
-.back-btn:hover { border-color: var(--blue); }
-.detail-title { font-size: 15px; font-weight: 800; color: #fff; }
+.back-btn:hover { border-color: var(--red); color: var(--red); }
+.detail-title { font-size: 15px; font-weight: 800; color: var(--navy); }
 .detail-status { font-size: 11px; color: var(--muted); margin-left: 4px; }
 
 /* ── Tabs ── */
@@ -150,32 +166,34 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
   cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
   transition: color .15s, border-color .15s; white-space: nowrap;
 }
-.tab:hover   { color: var(--text); }
-.tab.active  { color: var(--blue); border-bottom-color: var(--blue); }
+.tab:hover   { color: var(--navy); }
+.tab.active  { color: var(--red); border-bottom-color: var(--red); }
 
 .tab-content { display: none; padding: 20px; }
 .tab-content.active { display: block; }
 
 /* ── Section helpers ── */
 .section-label {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--muted); margin-bottom: 10px;
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--red); margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.panel   { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.panel   { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
 
 /* ── Pitcher matchup ── */
 .pitcher-matchup { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 12px; align-items: start; margin-bottom: 12px; }
 .pm-panel  { display: flex; flex-direction: column; gap: 8px; }
 .pm-panel.right { align-items: flex-end; text-align: right; }
-.pm-label  { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
-.pm-name   { font-size: 15px; font-weight: 800; color: #fff; }
+.pm-label  { font-size: 10px; font-weight: 700; color: var(--red); text-transform: uppercase; }
+.pm-name   { font-size: 15px; font-weight: 800; color: var(--navy); }
 .pm-record { font-size: 12px; color: var(--muted); }
 .pm-tbd    { font-size: 13px; color: var(--muted); font-style: italic; }
 .stat-strip { display: flex; gap: 6px; flex-wrap: wrap; }
 .pm-panel.right .stat-strip { justify-content: flex-end; }
 .stat-chip {
-  background: var(--card2); border-radius: 6px; padding: 5px 8px;
+  background: var(--card2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
   display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 42px;
 }
 .sc-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
@@ -241,7 +259,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .odds-tbl th:first-child { text-align: left; }
 .odds-tbl td { padding: 6px 10px; text-align: center; border-bottom: 1px solid rgba(30,45,66,.5); }
 .odds-tbl tr:last-child td { border-bottom: none; }
-.odds-tbl tr:hover td { background: rgba(255,255,255,.025); }
+.odds-tbl tr:hover td { background: rgba(200,16,46,.04); }
 .bk-name { text-align: left !important; color: var(--muted); font-size: 11px; }
 .ov { font-weight: 700; }
 .ov.best  { color: var(--green); font-size: 13px; }
@@ -295,7 +313,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .lineup-table td:nth-child(2),
 .lineup-table td:nth-child(3) { text-align: left; }
 .lineup-table tr:last-child td { border-bottom: none; }
-.lineup-table tr:hover td { background: rgba(255,255,255,.02); }
+.lineup-table tr:hover td { background: rgba(200,16,46,.03); }
 .lu-order { font-size: 11px; color: var(--muted); width: 20px; }
 .lu-name  { font-weight: 600; }
 .lu-pos   { font-size: 10px; color: var(--muted); background: var(--card2);
@@ -332,13 +350,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 
 /* ── Picks panel (detail) ── */
 .picks-panel {
-  background: linear-gradient(135deg, rgba(56,189,248,.06) 0%, rgba(74,222,128,.04) 100%);
-  border: 1px solid rgba(56,189,248,.25); border-radius: 10px;
+  background: linear-gradient(135deg, rgba(200,16,46,.04) 0%, rgba(0,33,71,.03) 100%);
+  border: 1px solid rgba(200,16,46,.2); border-radius: 10px;
   padding: 14px; margin-bottom: 14px;
 }
 .picks-panel-title {
   font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--blue); margin-bottom: 10px;
+  color: var(--red); margin-bottom: 10px;
 }
 .picks-list { display: flex; flex-direction: column; gap: 8px; }
 .pick-row {
@@ -359,7 +377,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 
 /* ── Loading / empty ── */
 .spinner-wrap { display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 10px; color: var(--muted); }
-.spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--blue);
+.spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--red);
            border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-msg { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
@@ -374,31 +392,33 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 /* ── Nav tabs ── */
 .nav-tabs {
   display: flex; gap: 4px;
-  background: rgba(255,255,255,.06); border-radius: 8px; padding: 3px;
+  background: rgba(255,255,255,.08); border-radius: 8px; padding: 3px;
 }
 .nav-tab {
-  background: none; border: none; color: var(--muted);
-  font-size: 12px; font-weight: 700; padding: 4px 12px;
+  background: none; border: none; color: rgba(255,255,255,.55);
+  font-size: 12px; font-weight: 700; padding: 4px 14px;
   border-radius: 6px; cursor: pointer; transition: background .15s, color .15s;
 }
-.nav-tab.active { background: var(--blue); color: #fff; }
-.nav-tab:hover:not(.active) { color: var(--text); }
+.nav-tab.active { background: var(--red); color: #fff; }
+.nav-tab:hover:not(.active) { color: #fff; background: rgba(255,255,255,.1); }
 
 /* ── K Props view ── */
 #view-kprops { display: none; }
 .kprops-header {
-  padding: 16px 20px 10px;
+  padding: 16px 20px 12px;
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  border-bottom: 1px solid var(--border); margin-bottom: 16px;
+  background: var(--surface);
 }
-.kprops-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+.kprops-title { font-size: 13px; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: .08em; }
 .kprops-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; }
 .kprops-actions { display: flex; align-items: center; gap: 10px; }
 .kprops-refresh-btn {
-  background: var(--card2); border: 1px solid var(--border); border-radius: 6px;
-  padding: 5px 14px; color: var(--blue); font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: border-color .15s;
+  background: var(--navy); border: 1px solid var(--navy); border-radius: 6px;
+  padding: 5px 14px; color: #fff; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
 }
-.kprops-refresh-btn:hover { border-color: var(--blue); }
+.kprops-refresh-btn:hover { background: var(--red); border-color: var(--red); }
 .kprops-refresh-btn:disabled { opacity: .5; cursor: default; }
 .kprops-meta { font-size: 11px; color: var(--muted); }
 .kprops-list { display: flex; flex-direction: column; gap: 8px; padding: 0 20px 40px; }
@@ -409,27 +429,29 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
   padding: 14px 16px; display: grid;
   grid-template-columns: 32px 1fr auto;
   gap: 12px; align-items: start;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  border-left: 4px solid var(--border);
 }
-.kp-card.tier-elite   { border-color: rgba(74,222,128,.35); }
-.kp-card.tier-strong  { border-color: rgba(52,211,153,.25); }
-.kp-card.tier-neutral { border-color: var(--border); }
-.kp-card.tier-weak    { border-color: rgba(251,191,36,.2); }
-.kp-card.tier-fade    { border-color: rgba(241,96,96,.2); }
+.kp-card.tier-elite   { border-left-color: #15803D; }
+.kp-card.tier-strong  { border-left-color: #0E7490; }
+.kp-card.tier-neutral { border-left-color: var(--border); }
+.kp-card.tier-weak    { border-left-color: var(--amber); }
+.kp-card.tier-fade    { border-left-color: var(--red); }
 
-.kp-rank { font-size: 18px; font-weight: 900; color: var(--muted); padding-top: 2px; text-align: center; }
+.kp-rank { font-size: 18px; font-weight: 900; color: var(--border); padding-top: 2px; text-align: center; }
 
 .kp-body { display: flex; flex-direction: column; gap: 6px; }
 .kp-top  { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.kp-name { font-size: 15px; font-weight: 800; color: #fff; }
+.kp-name { font-size: 15px; font-weight: 800; color: var(--navy); }
 .kp-matchup { font-size: 12px; color: var(--muted); }
 
 .kp-line-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .kp-line-label { font-size: 11px; color: var(--muted); }
-.kp-line-val { font-size: 14px; font-weight: 800; color: var(--blue); }
+.kp-line-val { font-size: 16px; font-weight: 900; color: var(--navy); }
 .kp-no-line { font-size: 11px; color: var(--muted); font-style: italic; }
 .kp-books { display: flex; gap: 5px; flex-wrap: wrap; }
 .kp-book-chip {
-  background: var(--card2); border-radius: 4px; padding: 2px 7px;
+  background: var(--card2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px;
   font-size: 10px; display: flex; gap: 4px; align-items: center;
 }
 .kp-book-name { color: var(--muted); }
@@ -438,18 +460,18 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 
 .kp-stats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
 .kp-stat-chip {
-  background: rgba(255,255,255,.04); border-radius: 4px; padding: 3px 7px;
-  font-size: 11px; color: var(--text);
+  background: var(--card2); border: 1px solid var(--border); border-radius: 4px; padding: 3px 7px;
+  font-size: 11px; color: var(--muted);
 }
-.kp-stat-chip b { color: var(--blue); }
+.kp-stat-chip b { color: var(--navy); font-weight: 700; }
 
 .kp-factors { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
 .kp-factor {
-  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px;
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
 }
-.kp-factor.pos { background: rgba(74,222,128,.15); color: var(--green); }
-.kp-factor.neg { background: rgba(241,96,96,.15);  color: var(--red); }
-.kp-factor.neu { background: rgba(90,116,148,.12); color: var(--muted); }
+.kp-factor.pos { background: rgba(21,128,61,.1);   color: var(--green); border: 1px solid rgba(21,128,61,.2); }
+.kp-factor.neg { background: rgba(200,16,46,.1);   color: var(--red);   border: 1px solid rgba(200,16,46,.2); }
+.kp-factor.neu { background: var(--card2);         color: var(--muted); border: 1px solid var(--border); }
 
 .kp-recent { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
 .kp-recent-label { font-size: 10px; color: var(--muted); }
@@ -460,8 +482,14 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .kp-start-chip.hot  { background: rgba(74,222,128,.15); color: var(--green); }
 .kp-start-chip.cold { background: rgba(241,96,96,.15);  color: var(--red); }
 
-.kp-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.kp-score { font-size: 28px; font-weight: 900; line-height: 1; }
+.kp-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 72px; }
+/* Primary metric: EV% when available, else score */
+.kp-ev       { font-size: 26px; font-weight: 900; line-height: 1; }
+.kp-ev.pos   { color: var(--green); }
+.kp-ev.neg   { color: var(--red); }
+.kp-ev-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.kp-score    { font-size: 26px; font-weight: 900; line-height: 1; }
+.kp-score-small { font-size: 11px; font-weight: 600; color: var(--muted); }
 .tier-elite   .kp-score { color: var(--green); }
 .tier-strong  .kp-score { color: var(--teal); }
 .tier-neutral .kp-score { color: var(--text); }
@@ -469,24 +497,44 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .tier-fade    .kp-score { color: var(--red); }
 
 .kp-tier-badge {
-  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
   padding: 2px 8px; border-radius: 4px;
 }
-.tier-elite   .kp-tier-badge { background: rgba(74,222,128,.2);  color: var(--green); }
-.tier-strong  .kp-tier-badge { background: rgba(52,211,153,.2);  color: var(--teal); }
-.tier-neutral .kp-tier-badge { background: rgba(90,116,148,.15); color: var(--muted); }
-.tier-weak    .kp-tier-badge { background: rgba(251,191,36,.2);  color: var(--amber); }
-.tier-fade    .kp-tier-badge { background: rgba(241,96,96,.2);   color: var(--red); }
+.tier-elite   .kp-tier-badge { background: rgba(21,128,61,.12);  color: var(--green); border: 1px solid rgba(21,128,61,.25); }
+.tier-strong  .kp-tier-badge { background: rgba(14,116,144,.12); color: var(--teal);  border: 1px solid rgba(14,116,144,.25); }
+.tier-neutral .kp-tier-badge { background: var(--card2);         color: var(--muted); border: 1px solid var(--border); }
+.tier-weak    .kp-tier-badge { background: rgba(180,83,9,.12);   color: var(--amber); border: 1px solid rgba(180,83,9,.25); }
+.tier-fade    .kp-tier-badge { background: rgba(200,16,46,.12);  color: var(--red);   border: 1px solid rgba(200,16,46,.25); }
+
+/* EV probability row */
+.kp-prob-row  { display: flex; align-items: center; gap: 6px; font-size: 10px; margin-top: 1px; }
+.kp-prob-model { font-weight: 700; color: var(--navy); }
+.kp-prob-sep   { color: var(--border); }
+.kp-prob-impl  { color: var(--muted); }
+
+/* Projected Ks inline */
+.kp-proj-ks    { font-size: 11px; color: var(--teal); font-weight: 600; background: rgba(14,116,144,.08); padding: 1px 6px; border-radius: 3px; }
+.kp-proj-ks b  { color: var(--navy); }
+
+/* Umpire row */
+.kp-ump-row    { display: flex; align-items: center; gap: 6px; font-size: 11px; flex-wrap: wrap; }
+.kp-ump-label  { color: var(--muted); font-size: 10px; }
+.kp-ump-name   { color: var(--text); font-weight: 600; }
+.kp-ump-adj    { font-weight: 700; padding: 1px 6px; border-radius: 3px; font-size: 10px; }
+.kp-ump-adj.pos { background: rgba(21,128,61,.1);  color: var(--green); border: 1px solid rgba(21,128,61,.2); }
+.kp-ump-adj.neg { background: rgba(200,16,46,.1);  color: var(--red);   border: 1px solid rgba(200,16,46,.2); }
+.kp-ump-adj.neu { background: var(--card2);        color: var(--muted); border: 1px solid var(--border); }
 
 .kprops-load-wrap { padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .kprops-load-btn {
-  background: linear-gradient(135deg, rgba(56,189,248,.15), rgba(74,222,128,.1));
-  border: 1px solid rgba(56,189,248,.35); border-radius: 10px;
-  padding: 16px 28px; color: var(--blue); font-size: 14px; font-weight: 700;
+  background: var(--navy);
+  border: none; border-radius: 10px;
+  padding: 16px 28px; color: #fff; font-size: 14px; font-weight: 700;
   cursor: pointer; width: 100%; max-width: 480px;
-  transition: border-color .15s, background .15s;
+  transition: background .15s;
+  box-shadow: 0 2px 8px rgba(0,33,71,.2);
 }
-.kprops-load-btn:hover { border-color: var(--blue); background: rgba(56,189,248,.2); }
+.kprops-load-btn:hover { background: var(--red); }
 .kprops-load-note { font-size: 11px; color: var(--muted); }
 
 .kprops-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
@@ -549,7 +597,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
   <div class="kprops-header">
     <div>
       <div class="kprops-title">Pitcher Strikeout Rankings</div>
-      <div class="kprops-subtitle">Scored on K/9, opponent K%, control, recent form &amp; line value</div>
+      <div class="kprops-subtitle">Statcast SwStr% · Poisson EV model · Umpire K-rate layer</div>
     </div>
     <div class="kprops-actions">
       <span class="kprops-meta" id="kprops-meta"></span>
@@ -893,7 +941,7 @@ function renderOddsTab(g) {
 
     // Value alert
     const valueHtml = cons.hasValue ? `
-      <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px">
+      <div style="background:rgba(180,83,9,.06);border:1px solid rgba(180,83,9,.25);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px">
         <span style="font-weight:700;color:var(--amber)">⚡ Value Alert</span>
         ${cons.awaySpread >= 0.03 ? `<span style="color:var(--text);margin-left:8px">${g.away.abbr}: ${(cons.awaySpread*100).toFixed(1)}pp spread — shop books for best line</span>` : ''}
         ${cons.homeSpread >= 0.03 ? `<span style="color:var(--text);margin-left:8px">${g.home.abbr}: ${(cons.homeSpread*100).toFixed(1)}pp spread — shop books for best line</span>` : ''}
@@ -1147,47 +1195,83 @@ function switchView(view) {
 function fmtOddsSign(n) { return n == null ? '—' : n > 0 ? `+${n}` : `${n}`; }
 
 function renderKPropCard(p, rank) {
-  // Stats strip
+  const fmt1 = n => n != null ? (n * 100).toFixed(1) + '%' : '—';
+  const fmtK = n => n != null ? n.toFixed(1) : '—';
+
+  // Stats strip — includes Statcast fields if available
   const stats = [
+    p.swStr  != null ? `<div class="kp-stat-chip">SwStr% <b>${fmt1(p.swStr)}</b></div>` : '',
+    p.xKPct  != null ? `<div class="kp-stat-chip">xK% <b>${fmt1(p.xKPct)}</b></div>` : '',
     p.stats?.k9   != null ? `<div class="kp-stat-chip">K/9 <b>${p.stats.k9}</b></div>` : '',
     p.stats?.kbb  != null ? `<div class="kp-stat-chip">K/BB <b>${p.stats.kbb}</b></div>` : '',
     p.stats?.era  != null ? `<div class="kp-stat-chip">ERA <b>${p.stats.era}</b></div>` : '',
-    p.stats?.whip != null ? `<div class="kp-stat-chip">WHIP <b>${p.stats.whip}</b></div>` : '',
-    p.stats?.gs   != null ? `<div class="kp-stat-chip">GS <b>${p.stats.gs}</b></div>` : ''
+    p.stats?.gs   != null ? `<div class="kp-stat-chip">GS <b>${p.stats.gs}</b></div>` : '',
+    p.kelly != null && p.kelly > 0.01 ? `<div class="kp-stat-chip">Kelly <b>${fmt1(p.kelly)}</b></div>` : ''
   ].filter(Boolean).join('');
 
   // Factor tags
   const factorTags = (p.factors || []).map(f =>
-    `<span class="kp-factor ${f.impact}" title="${f.pts > 0 ? '+' : ''}${f.pts} pts">${f.label}</span>`
+    `<span class="kp-factor ${f.impact}" title="${f.pts >= 0 ? '+' : ''}${f.pts} pts">${f.label}</span>`
   ).join('');
 
-  // Prop line + books
+  // Prop line + books + proj Ks
   let lineHtml = '';
   if (p.propLine != null) {
-    const bestOver  = p.propBooks.reduce((best, b) => (b.over  != null && (best == null || b.over  > best) ? b.over  : best), null);
-    const bestUnder = p.propBooks.reduce((best, b) => (b.under != null && (best == null || b.under > best) ? b.under : best), null);
     const booksHtml = p.propBooks.slice(0, 4).map(b => `
       <div class="kp-book-chip">
-        <span class="kp-book-name">${b.book.replace(/sportsbook|sports|bet/gi, '').trim()}</span>
+        <span class="kp-book-name">${b.book.replace(/sportsbook|sportsbooks|sports/gi, '').trim()}</span>
         <span class="kp-book-over">O ${fmtOddsSign(b.over)}</span>
         <span style="color:var(--border)">/</span>
         <span class="kp-book-under">U ${fmtOddsSign(b.under)}</span>
       </div>`).join('');
+    const projChip = p.finalProjKs != null
+      ? `<span class="kp-proj-ks">Proj <b>${fmtK(p.finalProjKs)}</b></span>` : '';
     lineHtml = `
       <div class="kp-line-row">
         <span class="kp-line-label">K Line</span>
         <span class="kp-line-val">${p.propLine}</span>
+        ${projChip}
         ${booksHtml}
       </div>`;
   } else {
-    lineHtml = `<div class="kp-no-line">No prop line available yet</div>`;
+    const projChip = p.finalProjKs != null
+      ? `<span class="kp-proj-ks">Proj <b>${fmtK(p.finalProjKs)} K</b></span>` : '';
+    lineHtml = `<div class="kp-line-row"><div class="kp-no-line">No line posted yet</div>${projChip}</div>`;
+  }
+
+  // Model prob vs implied prob row
+  let probHtml = '';
+  if (p.modelProb != null && p.impliedProb != null) {
+    probHtml = `
+      <div class="kp-prob-row">
+        <span class="kp-prob-model">${fmt1(p.modelProb)} Over</span>
+        <span class="kp-prob-sep">vs</span>
+        <span class="kp-prob-impl">${fmt1(p.impliedProb)} implied</span>
+        ${p.edge != null ? `<span class="kp-factor ${p.edge >= 0 ? 'pos' : 'neg'}">${p.edge >= 0 ? '+' : ''}${(p.edge*100).toFixed(1)}% edge</span>` : ''}
+      </div>`;
+  }
+
+  // Umpire row
+  let umpHtml = '';
+  if (p.umpire?.name) {
+    const rawAdj = p.umpAdj ?? 0;         // absolute K adjustment for this start
+    // Convert back to K/9 for display: rawAdj / (expectedIP/9)
+    // We don't have expectedIP here so just show if positive/negative
+    const adjCls  = rawAdj > 0.1 ? 'pos' : rawAdj < -0.1 ? 'neg' : 'neu';
+    const adjLabel = rawAdj > 0.05 ? `+${rawAdj.toFixed(1)} K` : rawAdj < -0.05 ? `${rawAdj.toFixed(1)} K` : 'Avg';
+    umpHtml = `
+      <div class="kp-ump-row">
+        <span class="kp-ump-label">HP Ump:</span>
+        <span class="kp-ump-name">${p.umpire.name}</span>
+        <span class="kp-ump-adj ${adjCls}">${adjLabel}</span>
+      </div>`;
   }
 
   // Recent starts
   let recentHtml = '';
   if (p.recentStarts?.length) {
-    const seasonKPerStart = p.stats?.k9 && p.stats?.gs
-      ? (parseFloat(p.stats.k9) / 9) * Math.min(7, parseFloat(p.stats.ip || 0) / parseFloat(p.stats.gs))
+    const seasonKPerStart = p.stats?.k9 && p.stats?.gs && p.stats?.ip
+      ? (parseFloat(p.stats.k9) / 9) * Math.min(7, parseFloat(p.stats.ip) / parseFloat(p.stats.gs))
       : null;
     const chips = p.recentStarts.map(s => {
       const ks  = s.strikeOuts ?? 0;
@@ -1201,6 +1285,15 @@ function renderKPropCard(p, rank) {
       </div>`;
   }
 
+  // Right column: EV% primary (if available), else score
+  const rightHtml = p.ev != null
+    ? `<div class="kp-ev ${p.ev >= 0 ? 'pos' : 'neg'}">${(p.ev * 100).toFixed(1)}%</div>
+       <div class="kp-ev-label">EV</div>
+       <div class="kp-score-small">Score ${p.score}</div>
+       <div class="kp-tier-badge">${p.tier}</div>`
+    : `<div class="kp-score">${p.score}</div>
+       <div class="kp-tier-badge">${p.tier}</div>`;
+
   const gameTime = p.gameDate ? new Date(p.gameDate).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
 
   return `
@@ -1212,14 +1305,13 @@ function renderKPropCard(p, rank) {
           <span class="kp-matchup">${p.team.abbr} vs ${p.opponent.abbr}${gameTime ? ' · ' + gameTime : ''}</span>
         </div>
         ${lineHtml}
+        ${probHtml}
         <div class="kp-stats">${stats}</div>
+        ${umpHtml}
         ${recentHtml}
         <div class="kp-factors">${factorTags}</div>
       </div>
-      <div class="kp-right">
-        <div class="kp-score">${p.score}</div>
-        <div class="kp-tier-badge">${p.tier}</div>
-      </div>
+      <div class="kp-right">${rightHtml}</div>
     </div>`;
 }
 

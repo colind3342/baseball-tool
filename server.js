@@ -13,7 +13,9 @@ const {
   getEnrichedLineup,
   fetchAllPitcherRecentStarts
 } = require('./services/mlb');
-const { scorePitcher } = require('./services/strikeouts');
+const { scorePitcher, calcKProjection } = require('./services/strikeouts');
+const { refreshStatcast, getStatcastMap } = require('./services/statcast');
+const { getUmpireAdj } = require('./services/umpires');
 const { getMLBOdds }        = require('./services/odds');
 const { getWeatherForGame } = require('./services/weather');
 const { getParkFactor, getParkLabel } = require('./services/parkFactors');
@@ -460,6 +462,9 @@ app.get('/api/strikeout-props', async (req, res) => {
     )];
     const recentStartsMap = await fetchAllPitcherRecentStarts(pitcherIds, 5);
 
+    // Statcast map (daily cache — already populated at boot)
+    const statcastMap = getStatcastMap();
+
     // Build ranked list
     const pitchers = [];
     for (const game of cache.games) {
@@ -473,6 +478,9 @@ app.get('/api/strikeout-props', async (req, res) => {
         const oppHitting   = opp.teamStats?.hitting;
         const recentStarts = recentStartsMap[pitcher.id] || [];
         const kData        = kPropsPerGame[game.gamePk];
+        const statcastData = statcastMap[String(pitcher.id)] || null;
+        const umpName      = game.umpire?.name || null;
+        const umpAdj       = getUmpireAdj(umpName);
 
         // Extract K line + best books for this pitcher
         let propLine = null;
@@ -482,7 +490,6 @@ app.get('/api/strikeout-props', async (req, res) => {
           for (const bm of kData.bookmakers) {
             const mkt = bm.markets?.find(m => m.key === 'pitcher_strikeouts');
             if (!mkt) continue;
-            // Match by last name (prop player names vary by book)
             const over  = mkt.outcomes?.find(o => o.description === 'Over'  && o.name.toLowerCase().includes(lastName));
             const under = mkt.outcomes?.find(o => o.description === 'Under' && o.name.toLowerCase().includes(lastName));
             if (over?.point != null) {
@@ -492,12 +499,9 @@ app.get('/api/strikeout-props', async (req, res) => {
           }
         }
 
-        const { score, tier, tierCls, factors } = scorePitcher({
-          pitcherStats: stats,
-          recentStarts,
-          propLine,
-          oppHitting
-        });
+        const { score, tier, tierCls, factors } = scorePitcher({ pitcherStats: stats, recentStarts, propLine, oppHitting });
+
+        const proj = calcKProjection({ pitcherStats: stats, statcastData, oppHitting, umpAdj, propLine, propBooks });
 
         pitchers.push({
           pitcher,
@@ -505,19 +509,35 @@ app.get('/api/strikeout-props', async (req, res) => {
           opponent:     { abbr: opp.abbr,  teamName: opp.teamName },
           gamePk:       game.gamePk,
           gameDate:     game.gameDate,
+          umpire:       game.umpire || null,
           stats,
           recentStarts: recentStarts.slice(-3),
           propLine,
           propBooks,
-          score,
-          tier,
-          tierCls,
-          factors
+          score, tier, tierCls, factors,
+          // Statcast + Poisson EV fields
+          hasStatcast:  statcastData !== null,
+          swStr:        proj.swStr,
+          xKPct:        proj.xKPct,
+          projectedKs:  proj.baseProj,
+          umpAdj:       proj.umpKAdj,
+          finalProjKs:  proj.finalProjKs,
+          modelProb:    proj.modelProb,
+          impliedProb:  proj.impliedProb,
+          edge:         proj.edge,
+          ev:           proj.ev,
+          kelly:        proj.kelly
         });
       }
     }
 
-    pitchers.sort((a, b) => b.score - a.score);
+    // Sort: EV descending when available, then score descending
+    pitchers.sort((a, b) => {
+      if (a.ev != null && b.ev != null) return b.ev - a.ev;
+      if (a.ev != null) return -1;
+      if (b.ev != null) return 1;
+      return b.score - a.score;
+    });
 
     const result = {
       pitchers,
@@ -536,12 +556,14 @@ app.get('/api/strikeout-props', async (req, res) => {
 });
 
 // ── Cron schedules ────────────────────────────────────────────────────────────
-cron.schedule('*/15 * * * *', refreshGames); // every 15 min
-cron.schedule('0 * * * *',    refreshOdds);  // every hour on the hour
+cron.schedule('*/15 * * * *', refreshGames);          // every 15 min
+cron.schedule('0 * * * *',    refreshOdds);           // every hour
+cron.schedule('0 9 * * *',    refreshStatcast);       // daily at 9 AM (data is per-day)
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 async function init() {
   await refreshOdds();
+  await refreshStatcast(); // fetch Savant data before first game refresh
   await refreshGames();
 }
 
