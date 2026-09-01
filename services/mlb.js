@@ -100,6 +100,9 @@ async function getTeamStats(teamId) {
   const h = hitData?.stats?.[0]?.splits?.[0]?.stat || {};
   const p = pitchData?.stats?.[0]?.splits?.[0]?.stat || {};
 
+  const hSO = h.strikeOuts ?? 0;
+  const hPA = h.plateAppearances ?? 1;
+
   return {
     hitting: {
       avg:  h.avg,
@@ -107,7 +110,10 @@ async function getTeamStats(teamId) {
       slg:  h.slg,
       ops:  h.ops,
       hrs:  h.homeRuns,
-      runs: h.runs
+      runs: h.runs,
+      so:   hSO,
+      pa:   hPA,
+      kPct: hPA > 0 ? hSO / hPA : null
     },
     pitching: {
       era:  p.era,
@@ -284,11 +290,137 @@ async function fetchAllBullpenUsage(games) {
   return map;
 }
 
+// ── Game Lineup ───────────────────────────────────────────────────────────────
+async function getGameLineup(gamePk) {
+  const data = await safeFetch(`${BASE}/game/${gamePk}/boxscore`);
+  if (!data) return null;
+
+  const result = {};
+  for (const side of ['away', 'home']) {
+    const team  = data.teams[side];
+    const order = team.battingOrder || [];
+
+    result[side] = {
+      teamId:   team.team.id,
+      teamName: team.team.name,
+      lineup: order.map(pid => {
+        const p = team.players[`ID${pid}`];
+        if (!p) return null;
+        return {
+          id:       pid,
+          name:     p.person.fullName,
+          position: p.position?.abbreviation || '—',
+          order:    p.battingOrder
+        };
+      }).filter(Boolean)
+    };
+  }
+  return result;
+}
+
+// ── Batter Season Stats ───────────────────────────────────────────────────────
+async function getBatterSeasonStats(batterId) {
+  const data = await safeFetch(
+    `${BASE}/people/${batterId}/stats?stats=season&group=hitting&season=${SEASON}`
+  );
+  const s = data?.stats?.[0]?.splits?.[0]?.stat;
+  if (!s) return null;
+  return {
+    avg: s.avg,
+    obp: s.obp,
+    slg: s.slg,
+    ops: s.ops,
+    hr:  s.homeRuns,
+    rbi: s.rbi,
+    sb:  s.stolenBases,
+    so:  s.strikeOuts,
+    bb:  s.baseOnBalls,
+    ab:  s.atBats,
+    hits: s.hits
+  };
+}
+
+// ── Batter vs Pitcher (career) ────────────────────────────────────────────────
+async function getBatterVsPitcher(batterId, pitcherId) {
+  const data = await safeFetch(
+    `${BASE}/people/${batterId}/stats?stats=vsPlayer&opposingPlayerId=${pitcherId}&group=hitting`
+  );
+  const s = data?.stats?.[0]?.splits?.[0]?.stat;
+  if (!s || !s.atBats) return null;
+  return {
+    ab:   s.atBats,
+    hits: s.hits,
+    avg:  s.avg,
+    hr:   s.homeRuns,
+    rbi:  s.rbi,
+    so:   s.strikeOuts,
+    bb:   s.baseOnBalls,
+    ops:  s.ops
+  };
+}
+
+// ── Full lineup enrichment (lineup + season stats + H2H) ─────────────────────
+async function getEnrichedLineup(gamePk, awayPitcherId, homePitcherId) {
+  const lineup = await getGameLineup(gamePk);
+  if (!lineup) return null;
+
+  // Fetch season stats + H2H for all batters in parallel
+  await Promise.all([
+    ...lineup.away.lineup.map(async batter => {
+      const [season, h2h] = await Promise.all([
+        getBatterSeasonStats(batter.id),
+        homePitcherId ? getBatterVsPitcher(batter.id, homePitcherId) : null
+      ]);
+      batter.season = season;
+      batter.h2h    = h2h;
+    }),
+    ...lineup.home.lineup.map(async batter => {
+      const [season, h2h] = await Promise.all([
+        getBatterSeasonStats(batter.id),
+        awayPitcherId ? getBatterVsPitcher(batter.id, awayPitcherId) : null
+      ]);
+      batter.season = season;
+      batter.h2h    = h2h;
+    })
+  ]);
+
+  return lineup;
+}
+
+// ── Pitcher Recent Starts (game log) ─────────────────────────────────────────
+async function getPitcherRecentStarts(id, n = 5) {
+  if (!id) return [];
+  const data = await safeFetch(
+    `${BASE}/people/${id}/stats?stats=gameLog&group=pitching&season=${SEASON}`
+  );
+  const splits = data?.stats?.[0]?.splits || [];
+  return splits
+    .filter(s => (s.stat?.gamesStarted ?? 0) > 0 || (parseFloat(s.stat?.inningsPitched) || 0) >= 3)
+    .slice(-n)
+    .map(s => ({
+      date:        s.date,
+      opponent:    s.opponent?.name || '',
+      strikeOuts:  s.stat?.strikeOuts ?? 0,
+      ip:          s.stat?.inningsPitched ?? '0.0',
+      hits:        s.stat?.hits ?? 0,
+      walks:       s.stat?.baseOnBalls ?? 0,
+      earnedRuns:  s.stat?.earnedRuns ?? 0
+    }));
+}
+
+async function fetchAllPitcherRecentStarts(ids, n = 5) {
+  const map = {};
+  await Promise.all(ids.map(async id => { map[id] = await getPitcherRecentStarts(id, n); }));
+  return map;
+}
+
 module.exports = {
   getTodaySchedule,
   fetchAllPitcherStats,
   fetchAllTeamStats,
   getStandings,
   fetchAllRecentGames,
-  fetchAllBullpenUsage
+  fetchAllBullpenUsage,
+  getEnrichedLineup,
+  fetchAllPitcherRecentStarts
 };
