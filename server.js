@@ -16,6 +16,7 @@ const {
 const { scorePitcher, calcKProjection } = require('./services/strikeouts');
 const { refreshStatcast, getStatcastMap } = require('./services/statcast');
 const { getUmpireAdj } = require('./services/umpires');
+const { calcGameModel } = require('./services/gamemodel');
 const { getMLBOdds }        = require('./services/odds');
 const { getWeatherForGame } = require('./services/weather');
 const { getParkFactor, getParkLabel } = require('./services/parkFactors');
@@ -553,6 +554,64 @@ app.get('/api/strikeout-props', async (req, res) => {
     console.error('strikeout-props error:', e.message);
     res.status(500).json({ error: e.message, pitchers: [] });
   }
+});
+
+// ── Game Model ────────────────────────────────────────────────────────────────
+app.get('/api/game-model', (req, res) => {
+  if (!cache.games.length) return res.json({ error: 'No games loaded yet', results: [] });
+
+  const results = cache.games.map(game => {
+    const model = calcGameModel(game);
+
+    // Find the highest-|EV| opportunity across ML and O/U
+    const bets = [
+      { market: 'ML', team: game.home.abbr, side: 'home', ...model.ml.home },
+      { market: 'ML', team: game.away.abbr, side: 'away', ...model.ml.away },
+      { market: 'O/U', team: `O ${model.ouLine ?? '—'}`, side: 'over',  ...model.ou.over },
+      { market: 'O/U', team: `U ${model.ouLine ?? '—'}`, side: 'under', ...model.ou.under }
+    ].filter(b => b.ev != null);
+
+    const bestAbsEV = bets.length ? Math.max(...bets.map(b => Math.abs(b.ev))) : 0;
+    const bestBet   = bets.find(b => Math.abs(b.ev) === bestAbsEV) || null;
+
+    return {
+      gamePk:    game.gamePk,
+      gameDate:  game.gameDate,
+      status:    game.status,
+      statusCode: game.statusCode,
+      venue:     game.venue,
+      park:      game.park,
+      weather:   game.weather,
+      umpire:    game.umpire || null,
+      away: {
+        abbr:            game.away.abbr,
+        teamName:        game.away.teamName,
+        probablePitcher: game.away.probablePitcher,
+        record:          game.away.record
+      },
+      home: {
+        abbr:            game.home.abbr,
+        teamName:        game.home.teamName,
+        probablePitcher: game.home.probablePitcher,
+        record:          game.home.record
+      },
+      model,
+      bestAbsEV,
+      bestBet
+    };
+  });
+
+  // Sort: games with EV data first (by best |EV|), then by game time
+  results.sort((a, b) => {
+    if (a.bestAbsEV !== b.bestAbsEV) return b.bestAbsEV - a.bestAbsEV;
+    return new Date(a.gameDate) - new Date(b.gameDate);
+  });
+
+  res.json({
+    results,
+    lastUpdated: cache.lastUpdated,
+    oddsUpdated: cache.oddsUpdated
+  });
 });
 
 // ── Cron schedules ────────────────────────────────────────────────────────────

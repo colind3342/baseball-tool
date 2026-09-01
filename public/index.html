@@ -538,6 +538,119 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .kprops-load-note { font-size: 11px; color: var(--muted); }
 
 .kprops-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+
+/* ── Game Model view ── */
+#view-model { display: none; }
+.model-header {
+  padding: 16px 20px 12px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  border-bottom: 1px solid var(--border); margin-bottom: 16px;
+  background: var(--surface);
+}
+.model-title    { font-size: 13px; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: .08em; }
+.model-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.model-meta     { font-size: 11px; color: var(--muted); }
+.model-list     { display: flex; flex-direction: column; gap: 10px; padding: 0 20px 40px; }
+
+/* ── Model card ── */
+.gm-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.gm-card.has-value { border-color: rgba(21,128,61,.25); border-left: 4px solid var(--green); }
+.gm-card.has-lean  { border-left: 4px solid var(--teal); }
+.gm-card.no-edge   { border-left: 4px solid var(--border); }
+
+/* Game header row */
+.gm-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 10px;
+}
+.gm-matchup { font-size: 15px; font-weight: 900; color: var(--navy); }
+.gm-sub     { font-size: 11px; color: var(--muted); }
+.gm-status  { font-size: 10px; }
+
+/* Win probability bar */
+.gm-prob-bar-wrap { margin-bottom: 10px; }
+.gm-prob-labels {
+  display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; font-weight: 700;
+}
+.gm-prob-bar {
+  height: 10px; border-radius: 6px; background: var(--border); overflow: hidden;
+  display: flex;
+}
+.gm-bar-away { background: var(--amber); height: 100%; }
+.gm-bar-home { background: var(--navy); height: 100%; }
+.gm-prob-pcts {
+  display: flex; justify-content: space-between; margin-top: 3px;
+  font-size: 12px; font-weight: 800;
+}
+.gm-prob-away { color: var(--amber); }
+.gm-prob-home { color: var(--navy); }
+
+/* Exp runs row */
+.gm-runs-row {
+  display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.gm-runs-label { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                 letter-spacing: .05em; color: var(--muted); }
+.gm-runs-val   { font-weight: 700; color: var(--navy); }
+.gm-runs-sep   { color: var(--border); }
+.gm-total-tag  {
+  font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 4px;
+  background: rgba(14,116,144,.08); color: var(--teal);
+  border: 1px solid rgba(14,116,144,.15);
+}
+
+/* Bet rows table */
+.gm-bets { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+.gm-bets th {
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--border); text-align: left;
+}
+.gm-bets td {
+  padding: 5px 6px; border-bottom: 1px solid rgba(30,45,66,.35); font-size: 12px; vertical-align: middle;
+}
+.gm-bets tr:last-child td { border-bottom: none; }
+.gm-bet-label  { color: var(--muted); font-size: 10px; font-weight: 700; width: 56px; }
+.gm-bet-team   { font-weight: 700; color: var(--navy); }
+.gm-bet-model  { font-weight: 700; color: var(--navy); text-align: right; width: 54px; }
+.gm-bet-mkt    { color: var(--muted); text-align: right; width: 54px; }
+.gm-bet-ev     { font-weight: 800; text-align: right; width: 58px; }
+.gm-bet-ev.pos { color: var(--green); }
+.gm-bet-ev.neg { color: var(--red); }
+.gm-bet-badge  { text-align: right; width: 52px; }
+.gm-bet-odds   { color: var(--muted); text-align: right; font-size: 11px; width: 50px; }
+
+/* BET / LEAN / PASS badges */
+.gm-badge {
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+  padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+}
+.gm-badge.bet  { background: rgba(21,128,61,.12);  color: var(--green); border: 1px solid rgba(21,128,61,.25); }
+.gm-badge.lean { background: rgba(14,116,144,.12); color: var(--teal);  border: 1px solid rgba(14,116,144,.25); }
+.gm-badge.pass { background: var(--card2);         color: var(--muted); border: 1px solid var(--border); }
+
+/* Factors row */
+.gm-factors { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.gm-factor {
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+}
+.gm-factor.home  { background: rgba(0,33,71,.08);   color: var(--navy); border: 1px solid rgba(0,33,71,.15); }
+.gm-factor.away  { background: rgba(180,83,9,.08);  color: var(--amber); border: 1px solid rgba(180,83,9,.18); }
+.gm-factor.chaos { background: rgba(200,16,46,.08); color: var(--red);  border: 1px solid rgba(200,16,46,.18); }
+
+/* Quality dots */
+.gm-quality { display: flex; align-items: center; gap: 5px; }
+.gm-quality-label { font-size: 10px; color: var(--muted); }
+.gm-qdot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+}
+.gm-qdot.on  { background: var(--green); }
+.gm-qdot.off { background: var(--border); }
+
+.model-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
@@ -548,6 +661,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-games-btn" onclick="switchView('games')">Games</button>
       <button class="nav-tab" id="tab-kprops-btn" onclick="switchView('kprops')">K Props</button>
+      <button class="nav-tab" id="tab-model-btn" onclick="switchView('model')">Model</button>
     </div>
     <div class="nav-date" id="nav-date"></div>
     <div class="nav-meta">Updated <b id="nav-updated">—</b></div>
@@ -590,6 +704,20 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 
   <!-- Odds & Props tab -->
   <div class="tab-content" id="tab-odds"></div>
+</div>
+
+<!-- ── Game Model View ── -->
+<div id="view-model">
+  <div class="model-header">
+    <div>
+      <div class="model-title">Game Model — ML &amp; O/U</div>
+      <div class="model-subtitle">Logistic win probability · Run expectation · Poisson O/U · EV vs market</div>
+    </div>
+    <div class="model-meta" id="model-meta"></div>
+  </div>
+  <div id="model-body">
+    <div class="spinner-wrap"><div class="spinner"></div>Loading model…</div>
+  </div>
 </div>
 
 <!-- ── K Props View ── -->
@@ -1181,14 +1309,185 @@ async function loadLineups(gamePk) {
   }
 }
 
+// ── Game Model renderer ───────────────────────────────────────────────────────
+function pct(p) { return p != null ? (p * 100).toFixed(1) + '%' : '—'; }
+function ev2(v) { return v != null ? (v * 100).toFixed(1) + '%' : '—'; }
+
+function renderBetBadge(ev) {
+  if (ev == null) return `<span class="gm-badge pass">—</span>`;
+  if (ev >= 0.05) return `<span class="gm-badge bet">BET</span>`;
+  if (ev >= 0.02) return `<span class="gm-badge lean">Lean</span>`;
+  return `<span class="gm-badge pass">Pass</span>`;
+}
+
+function renderBetRow(label, teamLabel, modelProb, impliedProb, ev, bestOdds) {
+  const evCls = ev != null ? (ev >= 0.02 ? 'pos' : 'neg') : '';
+  const modelStr   = modelProb != null ? pct(modelProb) : '—';
+  const impliedStr = impliedProb != null ? pct(impliedProb) : '—';
+  const evStr      = ev != null ? (ev >= 0 ? '+' : '') + ev2(ev) : '—';
+  const oddsStr    = bestOdds != null ? (bestOdds > 0 ? '+' + bestOdds : '' + bestOdds) : '—';
+  return `
+    <tr>
+      <td class="gm-bet-label">${label}</td>
+      <td class="gm-bet-team">${teamLabel}</td>
+      <td class="gm-bet-model">${modelStr}</td>
+      <td class="gm-bet-mkt">${impliedStr}</td>
+      <td class="gm-bet-ev ${evCls}">${evStr}</td>
+      <td class="gm-bet-badge">${renderBetBadge(ev)}</td>
+      <td class="gm-bet-odds">${oddsStr}</td>
+    </tr>`;
+}
+
+function renderModelCard(g) {
+  const m = g.model;
+  const { cls, label } = gameStatusInfo(g);
+
+  // Card border class
+  const hasValue = g.model.ml.home.ev >= 0.05 || g.model.ml.away.ev >= 0.05 ||
+                   g.model.ou.over.ev  >= 0.05 || g.model.ou.under.ev >= 0.05;
+  const hasLean  = !hasValue && (g.model.ml.home.ev >= 0.02 || g.model.ml.away.ev >= 0.02 ||
+                                  g.model.ou.over.ev  >= 0.02 || g.model.ou.under.ev >= 0.02);
+  const cardCls  = hasValue ? 'has-value' : hasLean ? 'has-lean' : 'no-edge';
+
+  // Probability bar
+  const homeP = (m.homeWinProb * 100).toFixed(1);
+  const awayP = (m.awayWinProb * 100).toFixed(1);
+
+  // Run labels
+  const gameTime = g.gameDate ? new Date(g.gameDate).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+  const awayRec  = g.away.record ? `${g.away.record.wins}-${g.away.record.losses}` : '';
+  const homeRec  = g.home.record ? `${g.home.record.wins}-${g.home.record.losses}` : '';
+
+  // Bet rows — show home ML, away ML, best O/U side
+  const mlBestSide = (m.ml.home.ev ?? -Infinity) >= (m.ml.away.ev ?? -Infinity) ? 'home' : 'away';
+
+  const awaySPName = g.away.probablePitcher?.name?.split(' ').pop() || '?';
+  const homeSPName = g.home.probablePitcher?.name?.split(' ').pop() || '?';
+  const ouLineStr  = m.ouLine != null ? m.ouLine.toFixed(1) : '—';
+
+  // Factors
+  const factorTags = (m.factors || []).map(f => {
+    const prefix = f.dir === 'home' ? `▲ ${g.home.abbr}` : f.dir === 'away' ? `▲ ${g.away.abbr}` : '⚡';
+    return `<span class="gm-factor ${f.dir}">${prefix} ${f.label}</span>`;
+  }).join('');
+
+  // Quality dots (7 booleans)
+  const qdots = Object.values(m.quality).map(v =>
+    `<span class="gm-qdot ${v ? 'on' : 'off'}"></span>`
+  ).join('');
+
+  return `
+    <div class="gm-card ${cardCls}">
+      <div class="gm-header">
+        <div>
+          <div class="gm-matchup">${g.away.abbr} @ ${g.home.abbr}</div>
+          <div class="gm-sub">${g.away.teamName} (${awayRec}) vs ${g.home.teamName} (${homeRec}) · ${gameTime} · ${g.venue?.name || ''}</div>
+          <div class="gm-sub" style="margin-top:2px">${awaySPName} vs ${homeSPName}</div>
+        </div>
+        <span class="status-pill ${cls}">${label}</span>
+      </div>
+
+      <!-- Win probability bar -->
+      <div class="gm-prob-bar-wrap">
+        <div class="gm-prob-labels">
+          <span>${g.away.abbr}</span>
+          <span>${g.home.abbr}</span>
+        </div>
+        <div class="gm-prob-bar">
+          <div class="gm-bar-away" style="width:${awayP}%"></div>
+          <div class="gm-bar-home" style="width:${homeP}%"></div>
+        </div>
+        <div class="gm-prob-pcts">
+          <span class="gm-prob-away">${awayP}%</span>
+          <span class="gm-prob-home">${homeP}%</span>
+        </div>
+      </div>
+
+      <!-- Expected runs -->
+      <div class="gm-runs-row">
+        <span class="gm-runs-label">Exp runs</span>
+        <span class="gm-runs-val">${g.away.abbr} ${m.awayExpRuns}</span>
+        <span class="gm-runs-sep">–</span>
+        <span class="gm-runs-val">${g.home.abbr} ${m.homeExpRuns}</span>
+        <span class="gm-runs-sep">·</span>
+        <span class="gm-total-tag">Total ${m.totalExp} (O/U ${ouLineStr})</span>
+        ${g.park?.runFactor >= 1.08 ? `<span class="badge hitter" style="font-size:9px">${g.park.label}</span>` : ''}
+        ${g.park?.runFactor <= 0.93 ? `<span class="badge pitcher" style="font-size:9px">${g.park.label}</span>` : ''}
+      </div>
+
+      <!-- Bet rows -->
+      <table class="gm-bets">
+        <thead>
+          <tr>
+            <th>Market</th>
+            <th>Pick</th>
+            <th style="text-align:right">Model</th>
+            <th style="text-align:right">Market</th>
+            <th style="text-align:right">EV%</th>
+            <th style="text-align:right">Signal</th>
+            <th style="text-align:right">Best Odds</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${renderBetRow('Away ML', `${g.away.abbr}`, m.ml.away.modelProb, m.ml.away.impliedProb, m.ml.away.ev, m.ml.away.bestOdds)}
+          ${renderBetRow('Home ML', `${g.home.abbr}`, m.ml.home.modelProb, m.ml.home.impliedProb, m.ml.home.ev, m.ml.home.bestOdds)}
+          ${renderBetRow('Over', `O ${ouLineStr}`, m.ou.over.modelProb, m.ou.over.impliedProb, m.ou.over.ev, m.ou.over.bestOdds)}
+          ${renderBetRow('Under', `U ${ouLineStr}`, m.ou.under.modelProb, m.ou.under.impliedProb, m.ou.under.ev, m.ou.under.bestOdds)}
+        </tbody>
+      </table>
+
+      <!-- Factors -->
+      ${m.factors.length ? `<div class="gm-factors">${factorTags}</div>` : ''}
+
+      <!-- Quality -->
+      <div class="gm-quality">
+        <span class="gm-quality-label">Data:</span>
+        ${qdots}
+        <span class="gm-quality-label" style="margin-left:2px">${m.qualityScore}/7</span>
+        ${m.qualityScore <= 4 ? `<span style="font-size:10px;color:var(--amber)">(low confidence)</span>` : ''}
+      </div>
+    </div>`;
+}
+
+async function loadGameModel() {
+  const body = document.getElementById('model-body');
+  const meta = document.getElementById('model-meta');
+  body.innerHTML = `<div class="spinner-wrap"><div class="spinner"></div>Running model…</div>`;
+
+  try {
+    const res  = await fetch('/api/game-model');
+    const data = await res.json();
+
+    if (data.error && !data.results?.length) {
+      body.innerHTML = `<div class="model-empty">${data.error}</div>`;
+      return;
+    }
+
+    const results = data.results || [];
+    if (!results.length) {
+      body.innerHTML = `<div class="model-empty">No games available for modeling today.</div>`;
+      return;
+    }
+
+    body.innerHTML = `<div class="model-list">${results.map(renderModelCard).join('')}</div>`;
+    const updAt = data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+    meta.textContent = `${results.length} games · updated ${updAt}`;
+  } catch (e) {
+    body.innerHTML = `<div class="model-empty">Error: ${e.message}</div>`;
+  }
+}
+
 // ── View switching ────────────────────────────────────────────────────────────
 function switchView(view) {
   currentView = view;
-  document.getElementById('view-list').style.display    = view === 'games'   ? 'block' : 'none';
+  document.getElementById('view-list').style.display    = view === 'games'  ? 'block' : 'none';
   document.getElementById('view-detail').style.display  = 'none';
-  document.getElementById('view-kprops').style.display  = view === 'kprops'  ? 'block' : 'none';
+  document.getElementById('view-kprops').style.display  = view === 'kprops' ? 'block' : 'none';
+  document.getElementById('view-model').style.display   = view === 'model'  ? 'block' : 'none';
   document.getElementById('tab-games-btn').classList.toggle('active',  view === 'games');
   document.getElementById('tab-kprops-btn').classList.toggle('active', view === 'kprops');
+  document.getElementById('tab-model-btn').classList.toggle('active',  view === 'model');
+  if (view === 'model') loadGameModel();
 }
 
 // ── K Props helpers ───────────────────────────────────────────────────────────
@@ -1378,6 +1677,7 @@ function selectGame(gamePk) {
   // Switch views + activate first tab
   document.getElementById('view-list').style.display   = 'none';
   document.getElementById('view-kprops').style.display = 'none';
+  document.getElementById('view-model').style.display  = 'none';
   document.getElementById('view-detail').style.display = 'block';
   activateTab('matchup');
   window.scrollTo(0, 0);
@@ -1387,8 +1687,10 @@ function showList() {
   document.getElementById('view-list').style.display   = 'block';
   document.getElementById('view-detail').style.display = 'none';
   document.getElementById('view-kprops').style.display = 'none';
+  document.getElementById('view-model').style.display  = 'none';
   document.getElementById('tab-games-btn').classList.add('active');
   document.getElementById('tab-kprops-btn').classList.remove('active');
+  document.getElementById('tab-model-btn').classList.remove('active');
   currentView  = 'games';
   selectedGame = null;
 }
