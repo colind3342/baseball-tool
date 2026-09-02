@@ -675,6 +675,181 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 .gm-qdot.off { background: var(--border); }
 
 .model-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+
+/* ── Bet Tracker ── */
+#view-tracker { display: none; }
+.tracker-header {
+  padding: 16px 20px 12px; background: var(--surface);
+  border-bottom: 1px solid var(--border); margin-bottom: 0;
+}
+.tracker-title    { font-size: 13px; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: .08em; }
+.tracker-subtitle { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* Summary bar */
+.tracker-summary {
+  display: flex; gap: 0; padding: 12px 20px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; gap: 8px 24px;
+}
+.ts-stat { display: flex; flex-direction: column; gap: 1px; }
+.ts-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.ts-val   { font-size: 18px; font-weight: 900; color: var(--navy); }
+.ts-val.pos { color: var(--green); }
+.ts-val.neg { color: var(--red); }
+.ts-val.neu { color: var(--muted); }
+
+/* Market breakdown */
+.tracker-breakdown {
+  display: flex; gap: 8px; padding: 10px 20px;
+  background: var(--card2); border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.tb-chip {
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 10px; font-size: 11px; display: flex; flex-direction: column; gap: 1px;
+}
+.tb-chip-label { font-size: 9px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+.tb-chip-val   { font-weight: 700; }
+.tb-chip-val.pos { color: var(--green); }
+.tb-chip-val.neg { color: var(--red); }
+.tb-chip-val.neu { color: var(--muted); }
+
+/* Filter row */
+.tracker-filters {
+  display: flex; gap: 4px; padding: 10px 20px;
+  border-bottom: 1px solid var(--border); background: var(--surface);
+  overflow-x: auto;
+}
+.tfilter {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 12px; font-size: 11px; font-weight: 600; color: var(--muted);
+  cursor: pointer; white-space: nowrap; transition: all .15s;
+}
+.tfilter.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+.tfilter:hover:not(.active) { border-color: var(--navy); color: var(--navy); }
+
+/* Bet list */
+.tracker-list { padding: 12px 20px 40px; display: flex; flex-direction: column; gap: 6px; }
+
+.bet-row {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 10px; align-items: center;
+}
+.bet-row.win  { border-left: 3px solid var(--green); }
+.bet-row.loss { border-left: 3px solid var(--red); }
+.bet-row.push { border-left: 3px solid var(--muted); }
+.bet-row.pending { border-left: 3px solid var(--amber); }
+
+.bet-result-icon { font-size: 16px; font-weight: 900; text-align: center; }
+.bet-result-icon.win  { color: var(--green); }
+.bet-result-icon.loss { color: var(--red); }
+.bet-result-icon.push { color: var(--muted); }
+.bet-result-icon.pending { color: var(--amber); }
+
+.bet-info { display: flex; flex-direction: column; gap: 3px; }
+.bet-main { font-size: 13px; font-weight: 700; color: var(--navy); }
+.bet-sub  { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.bet-sub b { color: var(--text); }
+.bet-clv-chip {
+  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px;
+}
+.bet-clv-chip.pos { background: rgba(21,128,61,.1); color: var(--green); }
+.bet-clv-chip.neg { background: rgba(200,16,46,.1); color: var(--red); }
+.bet-clv-chip.neu { background: var(--card2); color: var(--muted); }
+
+.bet-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.bet-pnl   { font-size: 15px; font-weight: 900; }
+.bet-pnl.pos { color: var(--green); }
+.bet-pnl.neg { color: var(--red); }
+.bet-pnl.neu { color: var(--muted); }
+.bet-update-btn {
+  background: none; border: 1px solid var(--border); border-radius: 5px;
+  padding: 2px 8px; font-size: 10px; font-weight: 600; color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.bet-update-btn:hover { border-color: var(--navy); color: var(--navy); }
+.bet-delete-btn {
+  background: none; border: none; font-size: 12px; color: var(--border);
+  cursor: pointer; padding: 2px 4px;
+}
+.bet-delete-btn:hover { color: var(--red); }
+
+.tracker-empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.tracker-empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.tracker-empty-sub   { font-size: 13px; }
+
+/* Log Bet button (on model/kprops cards) */
+.log-bet-btn {
+  background: rgba(0,33,71,.06); border: 1px solid rgba(0,33,71,.15);
+  border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 700;
+  color: var(--navy); cursor: pointer; white-space: nowrap;
+  transition: all .15s;
+}
+.log-bet-btn:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+/* ── Modal ── */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 500;
+}
+.modal {
+  display: none; position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  width: 360px; max-width: calc(100vw - 32px);
+  z-index: 501; box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+.modal-head {
+  padding: 16px 18px 12px; display: flex; justify-content: space-between; align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head-title { font-size: 15px; font-weight: 800; color: var(--navy); }
+.modal-head-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.modal-close { background: none; border: none; font-size: 20px; color: var(--muted);
+               cursor: pointer; line-height: 1; padding: 0; }
+.modal-close:hover { color: var(--red); }
+.modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 10px; font-weight: 800; text-transform: uppercase;
+              letter-spacing: .06em; color: var(--muted); }
+.form-input {
+  background: var(--card2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; font-size: 13px; color: var(--text); width: 100%;
+  transition: border-color .15s;
+}
+.form-input:focus { outline: none; border-color: var(--navy); }
+.form-select { appearance: none; }
+.form-prefill {
+  background: rgba(0,33,71,.05); border: 1px solid rgba(0,33,71,.12);
+  border-radius: 8px; padding: 10px 12px; font-size: 12px;
+}
+.form-prefill b { color: var(--navy); }
+.form-prefill .fp-row { display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
+.fp-item { color: var(--muted); }
+.fp-item b { color: var(--text); }
+
+.modal-save-btn {
+  background: var(--navy); border: none; border-radius: 8px;
+  padding: 11px; color: #fff; font-size: 13px; font-weight: 700;
+  cursor: pointer; width: 100%; transition: background .15s;
+}
+.modal-save-btn:hover { background: var(--red); }
+
+/* Result picker in update modal */
+.result-picker { display: flex; gap: 8px; }
+.result-btn {
+  flex: 1; padding: 8px 4px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; font-weight: 700; cursor: pointer; text-align: center;
+  background: var(--card2); color: var(--muted); transition: all .15s;
+}
+.result-btn.win.active  { background: rgba(21,128,61,.15); color: var(--green); border-color: var(--green); }
+.result-btn.loss.active { background: rgba(200,16,46,.15); color: var(--red);   border-color: var(--red); }
+.result-btn.push.active { background: rgba(107,101,96,.15); color: var(--muted); border-color: var(--muted); }
+.result-btn:hover { border-color: var(--navy); }
 </style>
 </head>
 <body>
@@ -686,6 +861,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
       <button class="nav-tab active" id="tab-games-btn" onclick="switchView('games')">Games</button>
       <button class="nav-tab" id="tab-kprops-btn" onclick="switchView('kprops')">K Props</button>
       <button class="nav-tab" id="tab-model-btn" onclick="switchView('model')">Model</button>
+      <button class="nav-tab" id="tab-tracker-btn" onclick="switchView('tracker')">Tracker</button>
     </div>
     <div class="nav-date" id="nav-date"></div>
     <div class="nav-meta">Updated <b id="nav-updated">—</b></div>
@@ -728,6 +904,40 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); font
 
   <!-- Odds & Props tab -->
   <div class="tab-content" id="tab-odds"></div>
+</div>
+
+<!-- ── Bet Tracker View ── -->
+<div id="view-tracker">
+  <div class="tracker-header">
+    <div class="tracker-title">Bet Tracker</div>
+    <div class="tracker-subtitle">Private · stored in your browser · log bets from the Model or K Props tabs</div>
+  </div>
+  <div id="tracker-summary" class="tracker-summary"></div>
+  <div id="tracker-breakdown" class="tracker-breakdown"></div>
+  <div class="tracker-filters">
+    <button class="tfilter active" onclick="setTrackerFilter('all')">All</button>
+    <button class="tfilter" onclick="setTrackerFilter('pending')">Pending</button>
+    <button class="tfilter" onclick="setTrackerFilter('settled')">Settled</button>
+    <button class="tfilter" onclick="setTrackerFilter('ML')">ML</button>
+    <button class="tfilter" onclick="setTrackerFilter('O/U')">O/U</button>
+    <button class="tfilter" onclick="setTrackerFilter('K Prop')">K Props</button>
+    <button class="tfilter" onclick="setTrackerFilter('Parlay')">Parlays</button>
+    <button class="tfilter" onclick="openLogParlayModal()" style="margin-left:8px;background:var(--navy);color:#fff;border-color:var(--navy)">+ Parlay</button>
+  </div>
+  <div id="tracker-list" class="tracker-list"></div>
+</div>
+
+<!-- ── Log / Update Bet Modal ── -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModal()"></div>
+<div class="modal" id="bet-modal">
+  <div class="modal-head">
+    <div>
+      <div class="modal-head-title" id="modal-title">Log Bet</div>
+      <div class="modal-head-sub" id="modal-sub"></div>
+    </div>
+    <button class="modal-close" onclick="closeModal()">×</button>
+  </div>
+  <div class="modal-body" id="modal-body"></div>
 </div>
 
 <!-- ── Game Model View ── -->
@@ -1333,6 +1543,452 @@ async function loadLineups(gamePk) {
   }
 }
 
+// ── Bet Tracker — localStorage store ─────────────────────────────────────────
+const BET_KEY = 'mlb_bets_v1';
+
+function getBets() {
+  try { return JSON.parse(localStorage.getItem(BET_KEY) || '[]'); } catch { return []; }
+}
+function saveBets(bets) {
+  localStorage.setItem(BET_KEY, JSON.stringify(bets));
+}
+function addBet(bet) {
+  const bets = getBets();
+  bets.unshift({ ...bet, id: Date.now() });
+  saveBets(bets);
+}
+function updateBet(id, changes) {
+  const bets = getBets().map(b => b.id === id ? { ...b, ...changes } : b);
+  saveBets(bets);
+}
+function deleteBet(id) {
+  saveBets(getBets().filter(b => b.id !== id));
+}
+
+// ── Bet math ──────────────────────────────────────────────────────────────────
+function toImplied(odds) {
+  if (odds == null) return null;
+  return odds >= 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100);
+}
+function calcPnl(stake, odds, result) {
+  if (result === 'push') return 0;
+  if (result === 'loss') return -stake;
+  if (result === 'win') {
+    const b = odds >= 0 ? odds / 100 : 100 / Math.abs(odds);
+    return parseFloat((stake * b).toFixed(2));
+  }
+  return null;
+}
+function calcCLV(betOdds, closingOdds) {
+  if (betOdds == null || closingOdds == null) return null;
+  // Positive = you beat the closing line (got better number than market settled at)
+  return parseFloat(((toImplied(closingOdds) - toImplied(betOdds)) * 100).toFixed(2));
+}
+
+// ── Tracker stats ─────────────────────────────────────────────────────────────
+function computeTrackerStats(bets) {
+  const settled = bets.filter(b => b.result && b.result !== 'pending');
+  const wins  = settled.filter(b => b.result === 'win').length;
+  const losses = settled.filter(b => b.result === 'loss').length;
+  const pushes = settled.filter(b => b.result === 'push').length;
+  const totalStake = settled.reduce((s, b) => s + (b.stake || 0), 0);
+  const totalPnl   = settled.reduce((s, b) => {
+    const p = calcPnl(b.stake, b.odds, b.result);
+    return s + (p ?? 0);
+  }, 0);
+  const roi = totalStake > 0 ? (totalPnl / totalStake) * 100 : null;
+
+  const clvBets = bets.filter(b => b.closingOdds != null);
+  const avgCLV  = clvBets.length > 0
+    ? clvBets.reduce((s, b) => s + (calcCLV(b.odds, b.closingOdds) ?? 0), 0) / clvBets.length
+    : null;
+
+  // Breakdown by market category
+  const markets = { 'ML': [], 'O/U': [], 'K Prop': [], 'Parlay': [] };
+  for (const b of settled) {
+    for (const k of Object.keys(markets)) {
+      if ((b.market || '').includes(k)) { markets[k].push(b); break; }
+    }
+  }
+  const mktStats = {};
+  for (const [k, mb] of Object.entries(markets)) {
+    const ms = mb.reduce((s, b) => s + (b.stake || 0), 0);
+    const mp = mb.reduce((s, b) => s + (calcPnl(b.stake, b.odds, b.result) ?? 0), 0);
+    mktStats[k] = {
+      count: mb.length,
+      roi: ms > 0 ? (mp / ms) * 100 : null,
+      pnl: mp,
+      wins: mb.filter(b => b.result === 'win').length
+    };
+  }
+
+  return { wins, losses, pushes, totalStake, totalPnl, roi, avgCLV, mktStats, settledCount: settled.length };
+}
+
+// ── Tracker filter state ──────────────────────────────────────────────────────
+let _trackerFilter = 'all';
+function setTrackerFilter(f) {
+  _trackerFilter = f;
+  document.querySelectorAll('.tfilter').forEach(el => {
+    el.classList.toggle('active', el.textContent.toLowerCase() === f.toLowerCase() ||
+      (f === 'all' && el.textContent === 'All'));
+  });
+  renderTrackerList();
+}
+
+// ── Tracker render ────────────────────────────────────────────────────────────
+function renderTrackerView() {
+  const bets  = getBets();
+  const stats = computeTrackerStats(bets);
+
+  // Summary bar
+  const roiCls  = stats.roi == null ? 'neu' : stats.roi >= 0 ? 'pos' : 'neg';
+  const pnlCls  = stats.totalPnl >= 0 ? 'pos' : 'neg';
+  const clvCls  = stats.avgCLV == null ? 'neu' : stats.avgCLV >= 0 ? 'pos' : 'neg';
+  document.getElementById('tracker-summary').innerHTML = `
+    <div class="ts-stat"><div class="ts-label">Bets</div><div class="ts-val neu">${bets.length}</div></div>
+    <div class="ts-stat"><div class="ts-label">Record</div><div class="ts-val neu">${stats.wins}‑${stats.losses}‑${stats.pushes}</div></div>
+    <div class="ts-stat"><div class="ts-label">ROI</div><div class="ts-val ${roiCls}">${stats.roi != null ? (stats.roi >= 0 ? '+' : '') + stats.roi.toFixed(1) + '%' : '—'}</div></div>
+    <div class="ts-stat"><div class="ts-label">P&amp;L</div><div class="ts-val ${pnlCls}">${stats.totalPnl >= 0 ? '+' : ''}$${stats.totalPnl.toFixed(2)}</div></div>
+    <div class="ts-stat"><div class="ts-label">Avg CLV</div><div class="ts-val ${clvCls}">${stats.avgCLV != null ? (stats.avgCLV >= 0 ? '+' : '') + stats.avgCLV.toFixed(1) + 'pp' : '—'}</div></div>
+  `;
+
+  // Market breakdown
+  const bd = document.getElementById('tracker-breakdown');
+  bd.innerHTML = Object.entries(stats.mktStats).map(([k, s]) => {
+    if (!s.count) return '';
+    const rc = s.roi == null ? 'neu' : s.roi >= 0 ? 'pos' : 'neg';
+    return `<div class="tb-chip">
+      <div class="tb-chip-label">${k}</div>
+      <div class="tb-chip-val ${rc}">${s.wins}‑${s.count - s.wins} · ${s.roi != null ? (s.roi >= 0?'+':'') + s.roi.toFixed(1)+'%' : '—'}</div>
+    </div>`;
+  }).join('');
+
+  renderTrackerList();
+}
+
+function renderTrackerList() {
+  const bets = getBets();
+  const f = _trackerFilter;
+  const filtered = bets.filter(b => {
+    if (f === 'all')     return true;
+    if (f === 'pending') return !b.result || b.result === 'pending';
+    if (f === 'settled') return b.result && b.result !== 'pending';
+    return (b.market || '').includes(f);
+  });
+
+  const list = document.getElementById('tracker-list');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="tracker-empty">
+      <div class="tracker-empty-title">No bets logged yet</div>
+      <div class="tracker-empty-sub">Click "Log" on any Model or K Props card to start tracking.</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(b => {
+    const result  = b.result || 'pending';
+    const pnl     = b.result && b.result !== 'pending' ? calcPnl(b.stake, b.odds, b.result) : null;
+    const clv     = calcCLV(b.odds, b.closingOdds);
+    const pnlStr  = pnl != null ? `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}` : 'Pending';
+    const pnlCls  = pnl == null ? 'neu' : pnl >= 0 ? 'pos' : 'neg';
+    const icon    = result === 'win' ? 'W' : result === 'loss' ? 'L' : result === 'push' ? 'P' : '•';
+    const oddsStr = b.odds >= 0 ? `+${b.odds}` : `${b.odds}`;
+    const clvHtml = clv != null
+      ? `<span class="bet-clv-chip ${clv >= 0 ? 'pos' : 'neg'}">CLV ${clv >= 0 ? '+' : ''}${clv.toFixed(1)}pp</span>`
+      : '';
+    const evHtml  = b.ev != null
+      ? `<span style="color:var(--muted)">Model EV ${b.ev >= 0 ? '+' : ''}${(b.ev*100).toFixed(1)}%</span>`
+      : '';
+
+    // Auto-settle button: only for pending ML/O/U bets where we can detect the result
+    const canAutoSettle = result === 'pending' && (b.market === 'ML' || b.market === 'O/U') && autoDetectResult(b) != null;
+    const autoBtn = canAutoSettle
+      ? `<button class="bet-update-btn" style="background:rgba(21,128,61,.1);color:var(--green);border-color:rgba(21,128,61,.3)" onclick="autoSettleBet(${b.id})">Auto-settle</button>`
+      : '';
+
+    return `
+      <div class="bet-row ${result}">
+        <div class="bet-result-icon ${result}">${icon}</div>
+        <div class="bet-info">
+          <div class="bet-main">${b.pick} — ${b.market}</div>
+          <div class="bet-sub">
+            <span>${b.date}</span>
+            <span>${b.game}</span>
+            <span><b>${oddsStr}</b> · ${b.book || '—'} · $${b.stake}</span>
+            ${clvHtml}${evHtml}
+          </div>
+        </div>
+        <div class="bet-right">
+          <div class="bet-pnl ${pnlCls}">${pnlStr}</div>
+          ${autoBtn}
+          <button class="bet-update-btn" onclick="openUpdateModal(${b.id})">Update</button>
+          <button class="bet-delete-btn" onclick="confirmDeleteBet(${b.id})" title="Delete">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function confirmDeleteBet(id) {
+  if (confirm('Delete this bet?')) { deleteBet(id); renderTrackerView(); }
+}
+
+// ── Auto win/loss detection ───────────────────────────────────────────────────
+function autoDetectResult(bet) {
+  if (!bet.gamePk) return null;
+  const game = allGames.find(g => g.gamePk === bet.gamePk);
+  if (!game || game.statusCode !== 'F') return null;
+  const awayScore = game.away.score;
+  const homeScore = game.home.score;
+  if (awayScore == null || homeScore == null) return null;
+  const total = awayScore + homeScore;
+
+  if (bet.market === 'ML') {
+    const pickLower = (bet.pick || '').toLowerCase();
+    const awayWin = awayScore > homeScore;
+    const homeWin = homeScore > awayScore;
+    const tie     = awayScore === homeScore;
+    const awayAbbr = game.away.abbr.toLowerCase();
+    const homeAbbr = game.home.abbr.toLowerCase();
+    if (pickLower.includes(awayAbbr)) return tie ? 'push' : awayWin ? 'win' : 'loss';
+    if (pickLower.includes(homeAbbr)) return tie ? 'push' : homeWin ? 'win' : 'loss';
+  }
+  if (bet.market === 'O/U') {
+    const numMatch = (bet.pick || '').match(/[\d.]+/);
+    if (!numMatch) return null;
+    const line = parseFloat(numMatch[0]);
+    const pickLower = (bet.pick || '').toLowerCase();
+    if (total === line) return 'push';
+    if (pickLower.startsWith('over'))  return total > line ? 'win' : 'loss';
+    if (pickLower.startsWith('under')) return total < line ? 'win' : 'loss';
+  }
+  return null;
+}
+
+function autoSettleBet(id) {
+  const bet    = getBets().find(b => b.id === id);
+  if (!bet) return;
+  const result = autoDetectResult(bet);
+  if (!result) { alert('Could not auto-detect result — settle manually.'); return; }
+  updateBet(id, { result });
+  renderTrackerView();
+}
+
+// ── Modal — shared log/update ─────────────────────────────────────────────────
+let _modalMode = null; // 'log' or 'update'
+let _modalBetId = null;
+let _selectedResult = null;
+
+function openModal() {
+  document.getElementById('modal-backdrop').style.display = 'block';
+  document.getElementById('bet-modal').style.display = 'block';
+}
+function closeModal() {
+  document.getElementById('modal-backdrop').style.display = 'none';
+  document.getElementById('bet-modal').style.display = 'none';
+  _modalMode = null; _modalBetId = null; _selectedResult = null;
+}
+
+// Pre-fills map — populated by model/kprops renderers
+window._betPrefills = {};
+
+function openLogModal(key) {
+  const p = window._betPrefills[key];
+  if (!p) return;
+  _modalMode = 'log';
+
+  const evStr  = p.ev != null ? `EV ${p.ev >= 0?'+':''}${(p.ev*100).toFixed(1)}%` : '';
+  const mProb  = p.modelProb != null ? `Model ${(p.modelProb*100).toFixed(1)}%` : '';
+
+  document.getElementById('modal-title').textContent = 'Log Bet';
+  document.getElementById('modal-sub').textContent   = `${p.game} · ${p.market}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-prefill">
+      <b>${p.pick}</b> — ${p.market}
+      <div class="fp-row">
+        ${mProb ? `<span class="fp-item"><b>${mProb}</b></span>` : ''}
+        ${evStr ? `<span class="fp-item" style="color:var(--green)"><b>${evStr}</b></span>` : ''}
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">Odds Taken</div>
+        <input class="form-input" id="f-odds" type="number" placeholder="-130" value="${p.snapshotOdds || ''}">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Stake ($)</div>
+        <input class="form-input" id="f-stake" type="number" placeholder="20" min="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Book</div>
+      <select class="form-input form-select" id="f-book">
+        <option>DraftKings</option><option>FanDuel</option><option>BetMGM</option>
+        <option>Caesars</option><option>Fanatics</option><option>PointsBet</option><option>Other</option>
+      </select>
+    </div>
+    <button class="modal-save-btn" onclick="saveLoggedBet(${JSON.stringify(p).replace(/"/g,'&quot;')})">Save Bet</button>
+  `;
+  openModal();
+}
+
+function saveLoggedBet(p) {
+  const odds  = parseInt(document.getElementById('f-odds').value);
+  const stake = parseFloat(document.getElementById('f-stake').value);
+  const book  = document.getElementById('f-book').value;
+  if (isNaN(odds) || isNaN(stake) || stake <= 0) { alert('Enter valid odds and stake.'); return; }
+  addBet({
+    game:      p.game,
+    gamePk:    p.gamePk,
+    date:      p.date,
+    market:    p.market,
+    pick:      p.pick,
+    modelProb: p.modelProb,
+    impliedProb: p.impliedProb,
+    ev:        p.ev,
+    odds,
+    stake,
+    book,
+    snapshotOdds: p.snapshotOdds || odds, // odds at time of logging (for CLV reference)
+    closingOdds: null,
+    result: 'pending',
+    pnl: null
+  });
+  closeModal();
+  if (currentView === 'tracker') renderTrackerView();
+}
+
+function openUpdateModal(id) {
+  const bet = getBets().find(b => b.id === id);
+  if (!bet) return;
+  _modalMode   = 'update';
+  _modalBetId  = id;
+  _selectedResult = bet.result !== 'pending' ? bet.result : null;
+
+  const oddsStr = bet.odds >= 0 ? `+${bet.odds}` : `${bet.odds}`;
+  document.getElementById('modal-title').textContent = 'Update Bet';
+  document.getElementById('modal-sub').textContent   = `${bet.game} · ${bet.market}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-prefill">
+      <b>${bet.pick}</b> · ${oddsStr} · $${bet.stake} · ${bet.book || '—'}
+      ${bet.date ? `<span style="color:var(--muted)"> · ${bet.date}</span>` : ''}
+    </div>
+    <div class="form-group">
+      <div class="form-label">Result</div>
+      <div class="result-picker">
+        <div class="result-btn win  ${_selectedResult==='win'  ?'active':''}" onclick="selectResult('win')">Win</div>
+        <div class="result-btn loss ${_selectedResult==='loss' ?'active':''}" onclick="selectResult('loss')">Loss</div>
+        <div class="result-btn push ${_selectedResult==='push' ?'active':''}" onclick="selectResult('push')">Push</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Closing Odds (optional — for CLV)</span>
+        ${bet.gamePk ? `<button onclick="autoFillClosingLine(${bet.gamePk},'${bet.market} ${bet.pick}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--blue);cursor:pointer">Pull closing line</button>` : ''}
+      </div>
+      <input class="form-input" id="f-closing" type="number" placeholder="${bet.snapshotOdds || bet.odds}"
+             value="${bet.closingOdds || ''}">
+      ${bet.snapshotOdds ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">Logged at: ${bet.snapshotOdds >= 0 ? '+'+bet.snapshotOdds : bet.snapshotOdds} — leave blank to use this for CLV</div>` : ''}
+    </div>
+    <button class="modal-save-btn" onclick="saveUpdatedBet()">Save</button>
+  `;
+  openModal();
+}
+
+function selectResult(r) {
+  _selectedResult = r;
+  document.querySelectorAll('.result-btn').forEach(el => {
+    el.classList.toggle('active', el.classList.contains(r));
+  });
+}
+
+function saveUpdatedBet() {
+  if (!_selectedResult) { alert('Select a result.'); return; }
+  const closingRaw  = document.getElementById('f-closing')?.value;
+  const bet         = getBets().find(b => b.id === _modalBetId);
+  const closingOdds = closingRaw ? parseInt(closingRaw) : (bet?.snapshotOdds ?? null);
+  updateBet(_modalBetId, { result: _selectedResult, closingOdds });
+  closeModal();
+  if (currentView === 'tracker') renderTrackerView();
+}
+
+function openLogParlayModal() {
+  _modalMode = 'log';
+  document.getElementById('modal-title').textContent = 'Log Parlay';
+  document.getElementById('modal-sub').textContent   = 'Combine multiple legs into one bet';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group">
+      <div class="form-label">Parlay Legs (describe each, comma-separated)</div>
+      <input class="form-input" id="f-parlay-legs" type="text" placeholder="NYY ML, Over 9, Cole Over 7.5 Ks">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">Combined Odds</div>
+        <input class="form-input" id="f-odds" type="number" placeholder="+450">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Stake ($)</div>
+        <input class="form-input" id="f-stake" type="number" placeholder="20" min="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">Book</div>
+      <select class="form-input form-select" id="f-book">
+        <option>DraftKings</option><option>FanDuel</option><option>BetMGM</option>
+        <option>Caesars</option><option>Fanatics</option><option>PointsBet</option><option>Other</option>
+      </select>
+    </div>
+    <button class="modal-save-btn" onclick="saveLoggedParlay()">Save Parlay</button>
+  `;
+  openModal();
+}
+
+function saveLoggedParlay() {
+  const legs  = document.getElementById('f-parlay-legs')?.value?.trim();
+  const odds  = parseInt(document.getElementById('f-odds').value);
+  const stake = parseFloat(document.getElementById('f-stake').value);
+  const book  = document.getElementById('f-book').value;
+  if (!legs) { alert('Enter at least one leg description.'); return; }
+  if (isNaN(odds) || isNaN(stake) || stake <= 0) { alert('Enter valid odds and stake.'); return; }
+  addBet({
+    game:    'Parlay',
+    gamePk:  null,
+    date:    new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    market:  'Parlay',
+    pick:    legs,
+    modelProb:   null,
+    impliedProb: null,
+    ev:          null,
+    odds, stake, book,
+    snapshotOdds: odds,
+    closingOdds: null,
+    result: 'pending',
+    pnl: null
+  });
+  closeModal();
+  if (currentView === 'tracker') renderTrackerView();
+}
+
+async function autoFillClosingLine(gamePk, market) {
+  try {
+    const res  = await fetch(`/api/closing-odds/${gamePk}`);
+    const data = await res.json();
+    if (!data.found) { alert('No closing odds captured for this game yet.'); return; }
+
+    let odds = null;
+    if (market.includes('Home ML'))  odds = data.mlHome;
+    if (market.includes('Away ML'))  odds = data.mlAway;
+    if (market.includes('Over'))     odds = data.ouOver;
+    if (market.includes('Under'))    odds = data.ouUnder;
+    if (market.includes('K Prop'))   odds = data.mlHome; // fallback — K props don't have market snapshot
+
+    if (odds == null) { alert('Closing odds not available for this market.'); return; }
+    document.getElementById('f-closing').value = odds;
+  } catch (e) {
+    alert('Could not fetch closing odds: ' + e.message);
+  }
+}
+
 // ── Game Model renderer ───────────────────────────────────────────────────────
 function pct(p) { return p != null ? (p * 100).toFixed(1) + '%' : '—'; }
 function ev2(v) { return v != null ? (v * 100).toFixed(1) + '%' : '—'; }
@@ -1344,12 +2000,14 @@ function renderBetBadge(ev) {
   return `<span class="gm-badge pass">Pass</span>`;
 }
 
-function renderBetRow(label, teamLabel, modelProb, impliedProb, ev, bestOdds) {
-  const evCls = ev != null ? (ev >= 0.02 ? 'pos' : 'neg') : '';
+function renderBetRow(label, teamLabel, modelProb, impliedProb, ev, bestOdds, prefillKey) {
+  const evCls      = ev != null ? (ev >= 0.02 ? 'pos' : 'neg') : '';
   const modelStr   = modelProb != null ? pct(modelProb) : '—';
   const impliedStr = impliedProb != null ? pct(impliedProb) : '—';
   const evStr      = ev != null ? (ev >= 0 ? '+' : '') + ev2(ev) : '—';
   const oddsStr    = bestOdds != null ? (bestOdds > 0 ? '+' + bestOdds : '' + bestOdds) : '—';
+  const logBtn     = prefillKey && ev != null
+    ? `<button class="log-bet-btn" onclick="openLogModal('${prefillKey}')">Log</button>` : '';
   return `
     <tr>
       <td class="gm-bet-label">${label}</td>
@@ -1359,6 +2017,7 @@ function renderBetRow(label, teamLabel, modelProb, impliedProb, ev, bestOdds) {
       <td class="gm-bet-ev ${evCls}">${evStr}</td>
       <td class="gm-bet-badge">${renderBetBadge(ev)}</td>
       <td class="gm-bet-odds">${oddsStr}</td>
+      <td style="text-align:right">${logBtn}</td>
     </tr>`;
 }
 
@@ -1468,6 +2127,19 @@ function renderModelCard(g) {
     `<span class="gm-qdot ${v ? 'on' : 'off'}"></span>`
   ).join('');
 
+  // Register prefills for bet logging
+  const gameLabel = `${g.away.abbr} @ ${g.home.abbr}`;
+  const dateStr   = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const pfBase    = { game: gameLabel, gamePk: g.gamePk, date: dateStr };
+  const kAwayML   = `${g.gamePk}_ml_away`;
+  const kHomeML   = `${g.gamePk}_ml_home`;
+  const kOver     = `${g.gamePk}_ou_over`;
+  const kUnder    = `${g.gamePk}_ou_under`;
+  window._betPrefills[kAwayML] = { ...pfBase, market: 'ML',  pick: `${g.away.abbr} ML`, modelProb: m.ml.away.modelProb,  impliedProb: m.ml.away.impliedProb,  ev: m.ml.away.ev,  snapshotOdds: m.ml.away.bestOdds };
+  window._betPrefills[kHomeML] = { ...pfBase, market: 'ML',  pick: `${g.home.abbr} ML`, modelProb: m.ml.home.modelProb,  impliedProb: m.ml.home.impliedProb,  ev: m.ml.home.ev,  snapshotOdds: m.ml.home.bestOdds };
+  window._betPrefills[kOver]   = { ...pfBase, market: 'O/U', pick: `Over ${ouLineStr}`,  modelProb: m.ou.over.modelProb,  impliedProb: m.ou.over.impliedProb,  ev: m.ou.over.ev,  snapshotOdds: m.ou.over.bestOdds };
+  window._betPrefills[kUnder]  = { ...pfBase, market: 'O/U', pick: `Under ${ouLineStr}`, modelProb: m.ou.under.modelProb, impliedProb: m.ou.under.impliedProb, ev: m.ou.under.ev, snapshotOdds: m.ou.under.bestOdds };
+
   return `
     <div class="gm-card ${cardCls}">
       <div class="gm-header">
@@ -1522,13 +2194,14 @@ function renderModelCard(g) {
             <th style="text-align:right">EV%</th>
             <th style="text-align:right">Signal</th>
             <th style="text-align:right">Best Odds</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          ${renderBetRow('Away ML', `${g.away.abbr}`, m.ml.away.modelProb, m.ml.away.impliedProb, m.ml.away.ev, m.ml.away.bestOdds)}
-          ${renderBetRow('Home ML', `${g.home.abbr}`, m.ml.home.modelProb, m.ml.home.impliedProb, m.ml.home.ev, m.ml.home.bestOdds)}
-          ${renderBetRow('Over', `O ${ouLineStr}`, m.ou.over.modelProb, m.ou.over.impliedProb, m.ou.over.ev, m.ou.over.bestOdds)}
-          ${renderBetRow('Under', `U ${ouLineStr}`, m.ou.under.modelProb, m.ou.under.impliedProb, m.ou.under.ev, m.ou.under.bestOdds)}
+          ${renderBetRow('Away ML', `${g.away.abbr}`, m.ml.away.modelProb, m.ml.away.impliedProb, m.ml.away.ev, m.ml.away.bestOdds, kAwayML)}
+          ${renderBetRow('Home ML', `${g.home.abbr}`, m.ml.home.modelProb, m.ml.home.impliedProb, m.ml.home.ev, m.ml.home.bestOdds, kHomeML)}
+          ${renderBetRow('Over', `O ${ouLineStr}`, m.ou.over.modelProb, m.ou.over.impliedProb, m.ou.over.ev, m.ou.over.bestOdds, kOver)}
+          ${renderBetRow('Under', `U ${ouLineStr}`, m.ou.under.modelProb, m.ou.under.impliedProb, m.ou.under.ev, m.ou.under.bestOdds, kUnder)}
         </tbody>
       </table>
 
@@ -1576,14 +2249,17 @@ async function loadGameModel() {
 // ── View switching ────────────────────────────────────────────────────────────
 function switchView(view) {
   currentView = view;
-  document.getElementById('view-list').style.display    = view === 'games'  ? 'block' : 'none';
+  document.getElementById('view-list').style.display    = view === 'games'   ? 'block' : 'none';
   document.getElementById('view-detail').style.display  = 'none';
-  document.getElementById('view-kprops').style.display  = view === 'kprops' ? 'block' : 'none';
-  document.getElementById('view-model').style.display   = view === 'model'  ? 'block' : 'none';
-  document.getElementById('tab-games-btn').classList.toggle('active',  view === 'games');
-  document.getElementById('tab-kprops-btn').classList.toggle('active', view === 'kprops');
-  document.getElementById('tab-model-btn').classList.toggle('active',  view === 'model');
-  if (view === 'model') loadGameModel();
+  document.getElementById('view-kprops').style.display  = view === 'kprops'  ? 'block' : 'none';
+  document.getElementById('view-model').style.display   = view === 'model'   ? 'block' : 'none';
+  document.getElementById('view-tracker').style.display = view === 'tracker' ? 'block' : 'none';
+  document.getElementById('tab-games-btn').classList.toggle('active',   view === 'games');
+  document.getElementById('tab-kprops-btn').classList.toggle('active',  view === 'kprops');
+  document.getElementById('tab-model-btn').classList.toggle('active',   view === 'model');
+  document.getElementById('tab-tracker-btn').classList.toggle('active', view === 'tracker');
+  if (view === 'model')   loadGameModel();
+  if (view === 'tracker') renderTrackerView();
 }
 
 // ── K Props helpers ───────────────────────────────────────────────────────────
@@ -1680,14 +2356,34 @@ function renderKPropCard(p, rank) {
       </div>`;
   }
 
+  // Register prefill for bet logging (over only — the direction with model EV)
+  const kpKey = `${p.gamePk}_kprop_${p.pitcher.id}`;
+  if (p.propLine != null) {
+    window._betPrefills[kpKey] = {
+      game:        `${p.team.abbr} vs ${p.opponent.abbr}`,
+      gamePk:      p.gamePk,
+      date:        new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      market:      'K Prop',
+      pick:        `${p.pitcher.name} Over ${p.propLine} Ks`,
+      modelProb:   p.modelProb,
+      impliedProb: p.impliedProb,
+      ev:          p.ev,
+      snapshotOdds: p.propBooks?.[0]?.over ?? null
+    };
+  }
+
   // Right column: EV% primary (if available), else score
+  const logBtnKp = p.propLine != null
+    ? `<button class="log-bet-btn" style="margin-top:4px" onclick="openLogModal('${kpKey}')">Log Over</button>` : '';
   const rightHtml = p.ev != null
     ? `<div class="kp-ev ${p.ev >= 0 ? 'pos' : 'neg'}">${(p.ev * 100).toFixed(1)}%</div>
        <div class="kp-ev-label">EV</div>
        <div class="kp-score-small">Score ${p.score}</div>
-       <div class="kp-tier-badge">${p.tier}</div>`
+       <div class="kp-tier-badge">${p.tier}</div>
+       ${logBtnKp}`
     : `<div class="kp-score">${p.score}</div>
-       <div class="kp-tier-badge">${p.tier}</div>`;
+       <div class="kp-tier-badge">${p.tier}</div>
+       ${logBtnKp}`;
 
   const gameTime = p.gameDate ? new Date(p.gameDate).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
 
@@ -1780,13 +2476,15 @@ function selectGame(gamePk) {
 }
 
 function showList() {
-  document.getElementById('view-list').style.display   = 'block';
-  document.getElementById('view-detail').style.display = 'none';
-  document.getElementById('view-kprops').style.display = 'none';
-  document.getElementById('view-model').style.display  = 'none';
+  document.getElementById('view-list').style.display    = 'block';
+  document.getElementById('view-detail').style.display  = 'none';
+  document.getElementById('view-kprops').style.display  = 'none';
+  document.getElementById('view-model').style.display   = 'none';
+  document.getElementById('view-tracker').style.display = 'none';
   document.getElementById('tab-games-btn').classList.add('active');
   document.getElementById('tab-kprops-btn').classList.remove('active');
   document.getElementById('tab-model-btn').classList.remove('active');
+  document.getElementById('tab-tracker-btn').classList.remove('active');
   currentView  = 'games';
   selectedGame = null;
 }

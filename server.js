@@ -30,9 +30,10 @@ const PORT        = process.env.PORT || 3000;
 const lineupCache    = {}; // gamePk -> { data, fetchedAt }
 const propsCache     = {}; // gamePk -> { data, fetchedAt }
 const kPropsCache    = { data: null, fetchedAt: null };
-// Lineup OPS cache — persists across refreshes; keyed by gamePk
-// Once a lineup is confirmed it doesn't change, so we never evict confirmed entries
 const lineupOPSCache = {}; // gamePk -> { away: {confirmed, ops, count}, home: {confirmed, ops, count} }
+// Closing odds — last-seen odds per game before it goes final.
+// Updated every odds refresh. Once a game is Final, frozen permanently.
+const closingOddsCache = {}; // gamePk -> { mlHome, mlAway, ouLine, ouOver, ouUnder, frozenAt }
 const LINEUP_TTL   = 10 * 60 * 1000;  // 10 min
 const PROPS_TTL    = 60 * 60 * 1000;  // 60 min
 const KPROPS_TTL   =  4 * 60 * 60 * 1000;  // 4 hours (saves API credits)
@@ -107,6 +108,30 @@ async function refreshOdds() {
     cache.rawOdds    = raw;
     cache.oddsUpdated = new Date().toISOString();
     console.log(`Odds updated — ${Object.keys(raw).length} games`);
+
+    // Snapshot closing odds for each game that hasn't gone Final yet
+    for (const game of cache.games) {
+      if (closingOddsCache[game.gamePk]?.frozenAt) continue; // already frozen
+      const odds = findOddsEntry(raw, game.away.teamName, game.home.teamName);
+      if (!odds) continue;
+
+      const books  = Object.values(odds.books || {});
+      const bestML = fn => { const v = books.map(fn).filter(n => n != null); return v.length ? Math.max(...v) : null; };
+      const ouLines = books.map(b => b.total?.line).filter(n => n != null);
+
+      const snap = {
+        mlHome:  bestML(b => b.ml?.home),
+        mlAway:  bestML(b => b.ml?.away),
+        ouLine:  ouLines.length ? ouLines.reduce((a, b) => a + b, 0) / ouLines.length : null,
+        ouOver:  bestML(b => b.total?.overOdds),
+        ouUnder: bestML(b => b.total?.underOdds),
+        snappedAt: new Date().toISOString()
+      };
+
+      // Freeze once game is in progress or final — those are true closing odds
+      if (game.statusCode === 'I' || game.statusCode === 'F') snap.frozenAt = snap.snappedAt;
+      closingOddsCache[game.gamePk] = snap;
+    }
   } catch (e) {
     console.error('refreshOdds error:', e.message);
   }
@@ -502,10 +527,11 @@ app.get('/api/strikeout-props', async (req, res) => {
     );
 
     // Fetch pitcher_strikeouts for each game (reuse propsCache when fresh)
+    const forceRefresh = !!req.query.refresh;
     const kPropsPerGame = {};
     await Promise.all(gamesWithOdds.map(async game => {
-      // Reuse full props cache if it already has K markets
-      if (propsCache[game.gamePk] && Date.now() - propsCache[game.gamePk].fetchedAt < PROPS_TTL) {
+      // Reuse full props cache only if NOT force-refreshing and cache is fresh
+      if (!forceRefresh && propsCache[game.gamePk] && Date.now() - propsCache[game.gamePk].fetchedAt < PROPS_TTL) {
         kPropsPerGame[game.gamePk] = propsCache[game.gamePk].data;
         return;
       }
@@ -520,7 +546,8 @@ app.get('/api/strikeout-props', async (req, res) => {
         if (apiRes.ok) {
           const data = await apiRes.json();
           kPropsPerGame[game.gamePk] = data;
-          if (!propsCache[game.gamePk]) propsCache[game.gamePk] = { data, fetchedAt: Date.now() };
+          // Store in propsCache (overwrite stale data on force refresh)
+          propsCache[game.gamePk] = { data, fetchedAt: Date.now() };
         }
       } catch (e) {
         console.warn(`K props fetch failed for gamePk ${game.gamePk}:`, e.message);
@@ -557,12 +584,23 @@ app.get('/api/strikeout-props', async (req, res) => {
         let propLine = null;
         const propBooks = [];
         if (kData?.bookmakers) {
+          // Last-name match: handles "Spencer Strider" → "strider", "A.J. Minter" → "minter"
           const lastName = pitcher.name.split(' ').slice(1).join(' ').toLowerCase();
+          // The Odds API player prop outcomes can appear in two formats:
+          //   Format A: { name: "Player Name", description: "Over", point, price }
+          //   Format B: { name: "Over", description: "Player Name", point, price }
+          // We handle both by checking both fields for name match and side.
+          const matchesName = o =>
+            (o.name  || '').toLowerCase().includes(lastName) ||
+            (o.description || '').toLowerCase().includes(lastName);
+          const isOver  = o => o.description === 'Over'  || o.name === 'Over';
+          const isUnder = o => o.description === 'Under' || o.name === 'Under';
+
           for (const bm of kData.bookmakers) {
             const mkt = bm.markets?.find(m => m.key === 'pitcher_strikeouts');
             if (!mkt) continue;
-            const over  = mkt.outcomes?.find(o => o.description === 'Over'  && o.name.toLowerCase().includes(lastName));
-            const under = mkt.outcomes?.find(o => o.description === 'Under' && o.name.toLowerCase().includes(lastName));
+            const over  = mkt.outcomes?.find(o => isOver(o)  && matchesName(o));
+            const under = mkt.outcomes?.find(o => isUnder(o) && matchesName(o));
             if (over?.point != null) {
               if (propLine == null) propLine = over.point;
               propBooks.push({ book: bm.title, line: over.point, over: over.price, under: under?.price ?? null });
@@ -616,14 +654,25 @@ app.get('/api/strikeout-props', async (req, res) => {
       gamesWithProps: Object.keys(kPropsPerGame).length
     };
 
-    kPropsCache.data      = result;
-    kPropsCache.fetchedAt = Date.now();
+    // Only cache if we actually got props data (don't lock in empty result before books post lines)
+    if (result.gamesWithProps > 0) {
+      kPropsCache.data      = result;
+      kPropsCache.fetchedAt = Date.now();
+    }
 
     res.json(result);
   } catch (e) {
     console.error('strikeout-props error:', e.message);
     res.status(500).json({ error: e.message, pitchers: [] });
   }
+});
+
+// ── Closing odds (for bet tracker CLV) ───────────────────────────────────────
+app.get('/api/closing-odds/:gamePk', (req, res) => {
+  const gamePk = parseInt(req.params.gamePk);
+  const snap   = closingOddsCache[gamePk];
+  if (!snap) return res.json({ found: false });
+  res.json({ found: true, ...snap });
 });
 
 // ── Game Model ────────────────────────────────────────────────────────────────
