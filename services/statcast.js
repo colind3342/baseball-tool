@@ -87,10 +87,12 @@ async function refreshStatcast() {
       const whiffPct = parseFloat(row['whiff_percent']) / 100 || null;
       const swingPct = parseFloat(row['swing_percent']) / 100 || null;
 
-      // SwStr% = whiff rate × swing rate
-      // xK% per PA ≈ 2.7 × SwStr% (empirical, R² ~0.85 historically)
+      // SwStr% = whiff rate × swing rate (swinging strikes / total pitches)
+      // xK% per PA calibrated on Savant data: K% ≈ 2.3 × SwStr% − 0.032
+      // (avg pitcher: 11% SwStr → 22% K%; elite: 18% SwStr → 38% K%)
+      // Cap at 0.40 — only the most elite arms ever exceed 38% K/PA.
       const swStr = (whiffPct != null && swingPct != null) ? whiffPct * swingPct : null;
-      const xKPct = swStr != null ? Math.min(0.45, 2.7 * swStr) : null;
+      const xKPct = swStr != null ? Math.min(0.40, Math.max(0, 2.3 * swStr - 0.032)) : null;
 
       // Quality-of-contact metrics (may be absent in older Savant exports — parse gracefully)
       const xERAraw      = parseFloat(row['xera']);

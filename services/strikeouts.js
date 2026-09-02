@@ -95,30 +95,34 @@ function calcKProjection({ pitcherStats, statcastData, oppHitting, umpAdj = 0, p
 
   // ── Statcast layer ──────────────────────────────────────────────────────────
   const swStr = statcastData?.swStr ?? null;  // precomputed in statcast.js
-  const xKPct = statcastData?.xKPct ?? null;  // 2.7 × SwStr%
+  const xKPct = statcastData?.xKPct ?? null;  // calibrated in statcast.js: 2.3*SwStr - 0.032
 
   // ── Pitcher K% per batter — regressed toward league mean ───────────────────
-  // Raw K/9 can be wildly inflated from small samples (e.g., 5 IP, 8 Ks = 14.4 K/9).
-  // We pull toward 8.5 K/9 proportional to how little data we have.
-  const reliableK9       = regressedK9(k9, ip);
-  const pitcherActualKPct = reliableK9 / (9 * 4.3);
+  // Raw K/9 inflated from small samples → pulled toward 8.5 K/9 based on IP.
+  const reliableK9        = regressedK9(k9, ip);
+  const pitcherActualKPct = reliableK9 / (9 * 4.15); // 4.15 BF/inn (MLB starter avg)
 
-  // ── Opponent K% (default to league avg 22% if missing) ─────────────────────
-  const oppKPct = oppHitting?.kPct ?? 0.22;
+  // ── Opponent K% — DIFFERENTIAL adjustment only ──────────────────────────────
+  // The pitcher's K/9 already reflects facing league-average lineups (~22% K rate).
+  // We adjust ONLY for how THIS lineup deviates — not blend in the raw rate.
+  const LEAGUE_OPP_KPCT = 0.22;
+  const oppKPct  = oppHitting?.kPct ?? LEAGUE_OPP_KPCT;
+  const oppDelta = oppKPct - LEAGUE_OPP_KPCT;
+  const oppAdj   = clamp(oppDelta * 0.35, -0.03, 0.03); // cap at ±3pp regardless of lineup
 
   // ── Blended K% per batter ──────────────────────────────────────────────────
   let blendedKPct;
   if (xKPct != null) {
-    // Full Statcast model: 50% Statcast xK%, 30% regressed season K%, 20% opp lineup K%
-    // Note: xKPct already incorporates Savant swinging-strike data — reliable at 25+ IP
-    blendedKPct = 0.50 * xKPct + 0.30 * pitcherActualKPct + 0.20 * oppKPct;
+    // Full Statcast model: 65% calibrated xK%, 35% regressed actual K%, plus opp delta
+    blendedKPct = 0.65 * xKPct + 0.35 * pitcherActualKPct + oppAdj;
   } else {
-    // Degraded: 60% regressed season K%, 40% opp lineup K%
-    blendedKPct = 0.60 * pitcherActualKPct + 0.40 * oppKPct;
+    // No Statcast: regressed actual K% + opponent adjustment
+    blendedKPct = pitcherActualKPct + oppAdj;
   }
+  blendedKPct = clamp(blendedKPct, 0.10, 0.42); // sanity floor/ceiling
 
   // ── Expected batters faced ──────────────────────────────────────────────────
-  const expectedBF = expectedIP * 4.3;
+  const expectedBF = expectedIP * 4.15; // 4.15 BF/inn (consistent with K% denominator)
   const baseProj   = blendedKPct * expectedBF;
 
   // ── Umpire adjustment ───────────────────────────────────────────────────────
