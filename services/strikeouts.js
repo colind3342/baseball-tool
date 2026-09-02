@@ -49,36 +49,72 @@ function poissonOverProb(lambda, line) {
  * @returns {{ swStr, xKPct, baseProj, umpKAdj, finalProjKs,
  *             modelProb, impliedProb, edge, ev, kelly }}
  */
+// League-average anchors for regression
+const LEAGUE_K9      = 8.5;  // ~2024 MLB average
+const REGRESSION_IP  = 60;   // full trust at 60+ IP
+
+/**
+ * Regress a pitcher's K/9 toward league average based on sample size.
+ * Prevents small-sample rate inflation — a pitcher with 8 IP and 15 K/9
+ * gets treated more like an 8.5 K/9 guy until he earns confidence.
+ */
+function regressedK9(rawK9, ip) {
+  if (isNaN(rawK9) || rawK9 <= 0 || isNaN(ip) || ip <= 0) return LEAGUE_K9;
+  const w = Math.min(1, ip / REGRESSION_IP);
+  return w * rawK9 + (1 - w) * LEAGUE_K9;
+}
+
 function calcKProjection({ pitcherStats, statcastData, oppHitting, umpAdj = 0, propLine = null, propBooks = [] }) {
   const k9 = parseFloat(pitcherStats?.k9);
   const ip  = parseFloat(pitcherStats?.ip);
   const gs  = parseFloat(pitcherStats?.gs);
 
-  // Expected IP per start (capped at 7 — modern usage)
-  const expectedIP = (gs > 0 && !isNaN(ip)) ? Math.min(7, ip / gs) : 5.5;
+  const nullResult = (swStr, xKPct) => ({
+    swStr, xKPct, baseProj: null, umpKAdj: 0, finalProjKs: null,
+    modelProb: null, impliedProb: null, edge: null, ev: null, kelly: null
+  });
+
+  // Require at least 5 IP to project — relief scraps or debut noise
+  if (isNaN(ip) || ip < 5) {
+    return nullResult(statcastData?.swStr ?? null, statcastData?.xKPct ?? null);
+  }
+
+  // ── Expected IP per start ───────────────────────────────────────────────────
+  // Use actual IP/GS when available; apply a sample-size-aware cap.
+  // Spot starters (0 GS in MLB API) get a conservative 4.0 IP assumption.
+  let expectedIP;
+  if (!isNaN(gs) && gs > 0) {
+    const avgIPPerStart = ip / gs;
+    // Fewer starts = less predictable; don't let a 2-start sample drive a 7-inn proj
+    const ipCap = gs >= 10 ? 6.5 : gs >= 5 ? 6.0 : 5.5;
+    expectedIP = Math.min(ipCap, avgIPPerStart);
+  } else {
+    // No GS data — spot/bullpen start — assume shorter outing
+    expectedIP = 4.0;
+  }
 
   // ── Statcast layer ──────────────────────────────────────────────────────────
   const swStr = statcastData?.swStr ?? null;  // precomputed in statcast.js
   const xKPct = statcastData?.xKPct ?? null;  // 2.7 × SwStr%
 
-  // ── Pitcher actual K% per batter faced ─────────────────────────────────────
-  // K/9 ÷ 9 ÷ BF/inn (league avg ~4.3) → Ks per batter faced
-  const pitcherActualKPct = (!isNaN(k9) && k9 > 0) ? k9 / (9 * 4.3) : null;
+  // ── Pitcher K% per batter — regressed toward league mean ───────────────────
+  // Raw K/9 can be wildly inflated from small samples (e.g., 5 IP, 8 Ks = 14.4 K/9).
+  // We pull toward 8.5 K/9 proportional to how little data we have.
+  const reliableK9       = regressedK9(k9, ip);
+  const pitcherActualKPct = reliableK9 / (9 * 4.3);
 
   // ── Opponent K% (default to league avg 22% if missing) ─────────────────────
   const oppKPct = oppHitting?.kPct ?? 0.22;
 
   // ── Blended K% per batter ──────────────────────────────────────────────────
   let blendedKPct;
-  if (xKPct != null && pitcherActualKPct != null) {
-    // Full Statcast model: 50% Statcast, 30% season K%, 20% opp lineup K%
+  if (xKPct != null) {
+    // Full Statcast model: 50% Statcast xK%, 30% regressed season K%, 20% opp lineup K%
+    // Note: xKPct already incorporates Savant swinging-strike data — reliable at 25+ IP
     blendedKPct = 0.50 * xKPct + 0.30 * pitcherActualKPct + 0.20 * oppKPct;
-  } else if (pitcherActualKPct != null) {
-    // Degraded: 60% season K%, 40% opp lineup K%
-    blendedKPct = 0.60 * pitcherActualKPct + 0.40 * oppKPct;
   } else {
-    // No pitcher stats — cannot project
-    return { swStr, xKPct, baseProj: null, umpKAdj: 0, finalProjKs: null, modelProb: null, impliedProb: null, edge: null, ev: null, kelly: null };
+    // Degraded: 60% regressed season K%, 40% opp lineup K%
+    blendedKPct = 0.60 * pitcherActualKPct + 0.40 * oppKPct;
   }
 
   // ── Expected batters faced ──────────────────────────────────────────────────
@@ -129,12 +165,15 @@ function scorePitcher({ pitcherStats, recentStarts, propLine, oppHitting }) {
   let score = 50;
   const factors = [];
 
-  // 1. K/9 rate (±20 pts) — league avg ~8.5
+  // 1. K/9 rate (±20 pts) — regressed toward league avg 8.5
   const k9 = parseFloat(pitcherStats?.k9);
+  const ip  = parseFloat(pitcherStats?.ip);
   if (!isNaN(k9) && k9 > 0) {
-    const pts = clamp(((k9 - 8.5) / 2.5) * 20, -20, 20);
+    const rk9 = regressedK9(k9, ip);
+    const pts = clamp(((rk9 - 8.5) / 2.5) * 20, -20, 20);
     score += pts;
-    factors.push({ label: `K/9 ${k9}`, impact: pts > 5 ? 'pos' : pts < -5 ? 'neg' : 'neu', pts: Math.round(pts) });
+    const label = !isNaN(ip) && ip < 30 ? `K/9 ${k9} (small sample)` : `K/9 ${k9}`;
+    factors.push({ label, impact: pts > 5 ? 'pos' : pts < -5 ? 'neg' : 'neu', pts: Math.round(pts) });
   }
 
   // 2. Opponent K% (±15 pts) — league avg ~22%
@@ -154,10 +193,15 @@ function scorePitcher({ pitcherStats, recentStarts, propLine, oppHitting }) {
   }
 
   // 4. Recent K trend (±10 pts)
-  const ip  = parseFloat(pitcherStats?.ip);
   const gs  = parseFloat(pitcherStats?.gs);
-  const expectedIP      = (gs > 0 && !isNaN(ip)) ? Math.min(7, ip / gs) : 5.5;
-  const seasonKPerStart = (!isNaN(k9) && expectedIP > 0) ? (k9 / 9) * expectedIP : null;
+  // Use regression-aware expectedIP for the score benchmark too
+  const ipScore = !isNaN(ip) ? ip : 0;
+  const expectedIPScore = (!isNaN(gs) && gs > 0 && !isNaN(ip))
+    ? Math.min(gs >= 10 ? 6.5 : 6.0, ip / gs)
+    : (!isNaN(gs) && gs === 0 ? 4.0 : 5.0);
+  // Compare against regressed season Ks so recent trend is grounded in reality
+  const rk9Score         = regressedK9(k9, ipScore);
+  const seasonKPerStart  = (!isNaN(rk9Score) && expectedIPScore > 0) ? (rk9Score / 9) * expectedIPScore : null;
 
   if (recentStarts?.length >= 2) {
     const avgRecentK = recentStarts.reduce((a, s) => a + (s.strikeOuts || 0), 0) / recentStarts.length;
