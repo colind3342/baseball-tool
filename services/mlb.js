@@ -362,6 +362,24 @@ async function getBatterVsPitcher(batterId, pitcherId) {
   };
 }
 
+// ── Confirmed lineup batting orders (lightweight — no per-batter stat fetch) ──
+async function getGameBattingOrders(gamePk) {
+  const data = await safeFetch(`${BASE}/game/${gamePk}/boxscore`);
+  if (!data) return null;
+  return {
+    away: (data.teams.away.battingOrder || []).slice(0, 9).map(Number),
+    home: (data.teams.home.battingOrder || []).slice(0, 9).map(Number)
+  };
+}
+
+// ── Batch batter season stats ─────────────────────────────────────────────────
+async function fetchAllBatterSeasonStats(ids) {
+  const map = {};
+  const unique = [...new Set(ids.map(String).filter(Boolean))];
+  await Promise.all(unique.map(async id => { map[id] = await getBatterSeasonStats(id); }));
+  return map;
+}
+
 // ── Full lineup enrichment (lineup + season stats + H2H) ─────────────────────
 async function getEnrichedLineup(gamePk, awayPitcherId, homePitcherId) {
   const lineup = await getGameLineup(gamePk);
@@ -425,5 +443,7 @@ module.exports = {
   fetchAllRecentGames,
   fetchAllBullpenUsage,
   getEnrichedLineup,
-  fetchAllPitcherRecentStarts
+  fetchAllPitcherRecentStarts,
+  getGameBattingOrders,
+  fetchAllBatterSeasonStats
 };

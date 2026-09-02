@@ -11,7 +11,9 @@ const {
   fetchAllRecentGames,
   fetchAllBullpenUsage,
   getEnrichedLineup,
-  fetchAllPitcherRecentStarts
+  fetchAllPitcherRecentStarts,
+  getGameBattingOrders,
+  fetchAllBatterSeasonStats
 } = require('./services/mlb');
 const { scorePitcher, calcKProjection } = require('./services/strikeouts');
 const { refreshStatcast, getStatcastMap } = require('./services/statcast');
@@ -25,9 +27,12 @@ const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const PORT        = process.env.PORT || 3000;
 
 // ── On-demand caches ──────────────────────────────────────────────────────────
-const lineupCache  = {}; // gamePk -> { data, fetchedAt }
-const propsCache   = {}; // gamePk -> { data, fetchedAt }
-const kPropsCache  = { data: null, fetchedAt: null };
+const lineupCache    = {}; // gamePk -> { data, fetchedAt }
+const propsCache     = {}; // gamePk -> { data, fetchedAt }
+const kPropsCache    = { data: null, fetchedAt: null };
+// Lineup OPS cache — persists across refreshes; keyed by gamePk
+// Once a lineup is confirmed it doesn't change, so we never evict confirmed entries
+const lineupOPSCache = {}; // gamePk -> { away: {confirmed, ops, count}, home: {confirmed, ops, count} }
 const LINEUP_TTL   = 10 * 60 * 1000;  // 10 min
 const PROPS_TTL    = 60 * 60 * 1000;  // 60 min
 const KPROPS_TTL   =  4 * 60 * 60 * 1000;  // 4 hours (saves API credits)
@@ -319,6 +324,71 @@ async function refreshGames() {
         movement,
         picks:       []  // filled below after object is complete
       };
+    });
+
+    // ── Confirmed lineup OPS ────────────────────────────────────────────────────
+    // For non-final games not yet cached, check if batting orders are posted.
+    // When confirmed, average the batters' season OPS — more accurate than team OPS.
+    const needsLineupCheck = games.filter(g =>
+      g.statusCode !== 'F' && !lineupOPSCache[g.gamePk]?.away?.confirmed
+    );
+
+    if (needsLineupCheck.length > 0) {
+      try {
+        // Fetch batting orders for all pending games in parallel
+        const orderResults = await Promise.all(
+          needsLineupCheck.map(async g => ({
+            gamePk: g.gamePk,
+            orders: await getGameBattingOrders(g.gamePk)
+          }))
+        );
+
+        // Collect all unique batter IDs from confirmed lineups (≥4 batters = lineup posted)
+        const allBatterIds = new Set();
+        for (const { orders } of orderResults) {
+          if (!orders) continue;
+          if (orders.away.length >= 4) orders.away.forEach(id => allBatterIds.add(id));
+          if (orders.home.length >= 4) orders.home.forEach(id => allBatterIds.add(id));
+        }
+
+        // Batch-fetch season stats for all unique batters in one pass
+        const batterMap = allBatterIds.size > 0
+          ? await fetchAllBatterSeasonStats([...allBatterIds])
+          : {};
+
+        // Compute average OPS per side for each game
+        const calcLineupOPS = (ids) => {
+          if (!ids || ids.length < 4) return { confirmed: false, ops: null, count: 0 };
+          const valid = ids
+            .map(id => batterMap[String(id)])
+            .filter(s => s?.ops != null);
+          if (!valid.length) return { confirmed: true, ops: null, count: 0 };
+          const avg = valid.reduce((sum, s) => sum + parseFloat(s.ops), 0) / valid.length;
+          return { confirmed: true, ops: parseFloat(avg.toFixed(3)), count: valid.length };
+        };
+
+        for (const { gamePk, orders } of orderResults) {
+          if (!orders) continue;
+          lineupOPSCache[gamePk] = {
+            away: calcLineupOPS(orders.away),
+            home: calcLineupOPS(orders.home)
+          };
+        }
+
+        const confirmed = Object.values(lineupOPSCache).filter(v => v.away?.confirmed || v.home?.confirmed).length;
+        if (confirmed > 0) console.log(`Lineup OPS confirmed for ${confirmed} games`);
+      } catch (e) {
+        console.warn('Lineup OPS fetch error:', e.message);
+      }
+    }
+
+    // Attach confirmed lineup OPS to game objects
+    games.forEach(game => {
+      const cached = lineupOPSCache[game.gamePk];
+      if (cached) {
+        game.away.lineupOPS = cached.away;
+        game.home.lineupOPS = cached.home;
+      }
     });
 
     // Generate picks now that each game object is fully assembled

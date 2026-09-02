@@ -176,9 +176,20 @@ function calcGameModel(game, statcastMap = {}) {
   const homeSpK9  = parseFloat(game.home.pitcherStats?.k9) || null;
   const awaySpK9  = parseFloat(game.away.pitcherStats?.k9) || null;
 
-  // ── Team data ────────────────────────────────────────────────────────────────
-  const homeOPS    = parseFloat(game.home.teamStats?.hitting?.ops)  || null;
-  const awayOPS    = parseFloat(game.away.teamStats?.hitting?.ops)  || null;
+  // ── Team data — use confirmed lineup OPS when available ──────────────────────
+  const homeLineup = game.home.lineupOPS?.confirmed ? game.home.lineupOPS : null;
+  const awayLineup = game.away.lineupOPS?.confirmed ? game.away.lineupOPS : null;
+
+  const homeTeamOPS = parseFloat(game.home.teamStats?.hitting?.ops) || null;
+  const awayTeamOPS = parseFloat(game.away.teamStats?.hitting?.ops) || null;
+
+  // Prefer confirmed lineup OPS — it reflects who's actually playing tonight
+  const homeOPS = homeLineup?.ops ?? homeTeamOPS;
+  const awayOPS = awayLineup?.ops ?? awayTeamOPS;
+
+  const homeLineupConfirmed = homeLineup != null;
+  const awayLineupConfirmed = awayLineup != null;
+
   const homeTeamERA = parseFloat(game.home.teamStats?.pitching?.era) || null;
   const awayTeamERA = parseFloat(game.away.teamStats?.pitching?.era) || null;
 
@@ -272,16 +283,40 @@ function calcGameModel(game, statcastMap = {}) {
     }
   }
 
-  // β₆ — Team OPS (2.00)
+  // β₆ — Team OPS (2.00) — uses confirmed lineup OPS when posted
   if (homeOPS != null && awayOPS != null) {
     const diff = homeOPS - awayOPS;
     const c = 2.00 * diff;
     logit += c;
     if (Math.abs(diff) >= 0.015) {
+      const homeTag = homeLineupConfirmed ? `✓ .${Math.round(homeOPS * 1000)}` : `.${Math.round(homeOPS * 1000)}`;
+      const awayTag = awayLineupConfirmed ? `✓ .${Math.round(awayOPS * 1000)}` : `.${Math.round(awayOPS * 1000)}`;
       factors.push({
-        label:     `Offense OPS .${Math.round(homeOPS * 1000)} vs .${Math.round(awayOPS * 1000)}`,
+        label:     `Offense OPS ${homeTag} vs ${awayTag}`,
         dir:       diff > 0 ? 'home' : 'away',
         magnitude: Math.abs(c)
+      });
+    }
+  }
+
+  // Lineup drop flag — if confirmed lineup OPS is significantly below team OPS, flag it
+  if (homeLineupConfirmed && homeTeamOPS != null && homeLineup.ops != null) {
+    const drop = homeTeamOPS - homeLineup.ops;
+    if (drop >= 0.025) {
+      factors.push({
+        label:     `${game.home.abbr} lineup down .${Math.round(drop * 1000)} OPS (regulars out?)`,
+        dir:       'away',
+        magnitude: 2.00 * drop
+      });
+    }
+  }
+  if (awayLineupConfirmed && awayTeamOPS != null && awayLineup.ops != null) {
+    const drop = awayTeamOPS - awayLineup.ops;
+    if (drop >= 0.025) {
+      factors.push({
+        label:     `${game.away.abbr} lineup down .${Math.round(drop * 1000)} OPS (regulars out?)`,
+        dir:       'home',
+        magnitude: 2.00 * drop
       });
     }
   }
@@ -395,17 +430,20 @@ function calcGameModel(game, statcastMap = {}) {
 
   // ── Data quality ──────────────────────────────────────────────────────────────
   const quality = {
-    homeRecord:    homeWinP != null,
-    awayRecord:    awayWinP != null,
-    homeSP:        homeSpQ.era != null,
-    awaySP:        awaySpQ.era != null,
-    homeStatcast:  homeSC != null,
-    awayStatcast:  awaySC != null,
-    homeOffense:   homeOPS != null,
-    awayOffense:   awayOPS != null,
-    odds:          books.length > 0
+    homeRecord:       homeWinP != null,
+    awayRecord:       awayWinP != null,
+    homeSP:           homeSpQ.era != null,
+    awaySP:           awaySpQ.era != null,
+    homeStatcast:     homeSC != null,
+    awayStatcast:     awaySC != null,
+    homeLineup:       homeLineupConfirmed,
+    awayLineup:       awayLineupConfirmed,
+    homeOffense:      homeOPS != null,
+    awayOffense:      awayOPS != null,
+    odds:             books.length > 0
   };
   const qualityScore = Object.values(quality).filter(Boolean).length;
+  const maxQuality   = Object.keys(quality).length;
 
   // ── Top factors (by magnitude, capped at 4) ──────────────────────────────────
   factors.sort((a, b) => b.magnitude - a.magnitude);
@@ -424,9 +462,13 @@ function calcGameModel(game, statcastMap = {}) {
     ml: { home: mlHome, away: mlAway },
     ou: { over: ouOver, under: ouUnder },
     spQuality: { home: homeSpQ, away: awaySpQ },
-    factors: factors.slice(0, 4),
+    lineupConfirmed: { home: homeLineupConfirmed, away: awayLineupConfirmed },
+    lineupOPS:       { home: homeLineup, away: awayLineup },
+    teamOPS:         { home: homeTeamOPS, away: awayTeamOPS },
+    factors: factors.slice(0, 5),
     quality,
-    qualityScore
+    qualityScore,
+    maxQuality
   };
 }
 

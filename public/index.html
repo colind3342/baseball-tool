@@ -1362,6 +1362,25 @@ function renderBetRow(label, teamLabel, modelProb, impliedProb, ev, bestOdds) {
     </tr>`;
 }
 
+function renderLineupBadges(g, m) {
+  const parts = [];
+  for (const side of ['away', 'home']) {
+    const lc = m.lineupConfirmed?.[side];
+    const lo = m.lineupOPS?.[side];
+    const to = m.teamOPS?.[side];
+    const abbr = g[side].abbr;
+    if (!lc) continue;
+    const ops    = lo?.ops != null ? lo.ops.toFixed(3) : null;
+    const drop   = (to != null && lo?.ops != null) ? to - lo.ops : null;
+    const dropTxt = drop != null && Math.abs(drop) >= 0.010
+      ? ` (${drop > 0 ? '−' : '+'}${Math.abs(Math.round(drop * 1000))} vs team)`
+      : '';
+    const cls = drop != null && drop >= 0.025 ? 'style="color:var(--red)"' : 'style="color:var(--green)"';
+    if (ops) parts.push(`<span class="gm-total-tag" ${cls}>✓ ${abbr} lineup .${Math.round(lo.ops * 1000)}${dropTxt}</span>`);
+  }
+  return parts.join('');
+}
+
 function spMetricCls(val, thresholds) {
   // thresholds: [goodBelow, badAbove] — e.g. ERA: good < 3.50, bad > 4.50
   if (val == null) return '';
@@ -1489,6 +1508,7 @@ function renderModelCard(g) {
         <span class="gm-total-tag">Total ${m.totalExp} (O/U ${ouLineStr})</span>
         ${g.park?.runFactor >= 1.08 ? `<span class="badge hitter" style="font-size:9px">${g.park.label}</span>` : ''}
         ${g.park?.runFactor <= 0.93 ? `<span class="badge pitcher" style="font-size:9px">${g.park.label}</span>` : ''}
+        ${renderLineupBadges(g, m)}
       </div>
 
       <!-- Bet rows -->
@@ -1519,8 +1539,8 @@ function renderModelCard(g) {
       <div class="gm-quality">
         <span class="gm-quality-label">Data:</span>
         ${qdots}
-        <span class="gm-quality-label" style="margin-left:2px">${m.qualityScore}/9</span>
-        ${m.qualityScore <= 5 ? `<span style="font-size:10px;color:var(--amber)">(low confidence)</span>` : ''}
+        <span class="gm-quality-label" style="margin-left:2px">${m.qualityScore}/${m.maxQuality ?? 11}</span>
+        ${m.qualityScore <= 6 ? `<span style="font-size:10px;color:var(--amber)">(low confidence)</span>` : ''}
       </div>
     </div>`;
 }
