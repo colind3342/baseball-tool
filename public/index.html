@@ -1838,21 +1838,22 @@ function saveLoggedBet(p) {
   const book  = document.getElementById('f-book').value;
   if (isNaN(odds) || isNaN(stake) || stake <= 0) { alert('Enter valid odds and stake.'); return; }
   addBet({
-    game:      p.game,
-    gamePk:    p.gamePk,
-    date:      p.date,
-    market:    p.market,
-    pick:      p.pick,
-    modelProb: p.modelProb,
-    impliedProb: p.impliedProb,
-    ev:        p.ev,
+    game:           p.game,
+    gamePk:         p.gamePk,
+    date:           p.date,
+    market:         p.market,
+    pick:           p.pick,
+    modelProb:      p.modelProb,
+    impliedProb:    p.impliedProb,
+    ev:             p.ev,
     odds,
     stake,
     book,
-    snapshotOdds: p.snapshotOdds || odds, // odds at time of logging (for CLV reference)
-    closingOdds: null,
-    result: 'pending',
-    pnl: null
+    snapshotOdds:   p.snapshotOdds || odds,
+    closingOddsKey: p.closingOddsKey ?? null, // which field in /api/closing-odds to use
+    closingOdds:    null,
+    result:         'pending',
+    pnl:            null
   });
   closeModal();
   if (currentView === 'tracker') renderTrackerView();
@@ -1884,7 +1885,7 @@ function openUpdateModal(id) {
     <div class="form-group">
       <div class="form-label" style="display:flex;justify-content:space-between;align-items:center">
         <span>Closing Odds (optional — for CLV)</span>
-        ${bet.gamePk ? `<button onclick="autoFillClosingLine(${bet.gamePk},'${bet.market} ${bet.pick}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--blue);cursor:pointer">Pull closing line</button>` : ''}
+        ${bet.gamePk && bet.closingOddsKey ? `<button onclick="autoFillClosingLine(${bet.gamePk},'${bet.closingOddsKey}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 7px;font-size:10px;color:var(--blue);cursor:pointer">Pull closing line</button>` : ''}
       </div>
       <input class="form-input" id="f-closing" type="number" placeholder="${bet.snapshotOdds || bet.odds}"
              value="${bet.closingOdds || ''}">
@@ -1969,20 +1970,15 @@ function saveLoggedParlay() {
   if (currentView === 'tracker') renderTrackerView();
 }
 
-async function autoFillClosingLine(gamePk, market) {
+// key = 'mlHome' | 'mlAway' | 'ouOver' | 'ouUnder' | null
+async function autoFillClosingLine(gamePk, key) {
+  if (!gamePk || !key) { alert('No closing line tracked for this market.'); return; }
   try {
     const res  = await fetch(`/api/closing-odds/${gamePk}`);
     const data = await res.json();
-    if (!data.found) { alert('No closing odds captured for this game yet.'); return; }
-
-    let odds = null;
-    if (market.includes('Home ML'))  odds = data.mlHome;
-    if (market.includes('Away ML'))  odds = data.mlAway;
-    if (market.includes('Over'))     odds = data.ouOver;
-    if (market.includes('Under'))    odds = data.ouUnder;
-    if (market.includes('K Prop'))   odds = data.mlHome; // fallback — K props don't have market snapshot
-
-    if (odds == null) { alert('Closing odds not available for this market.'); return; }
+    if (!data.found) { alert('No closing odds snapshot found for this game yet.'); return; }
+    const odds = data[key];
+    if (odds == null) { alert('Closing line not available for this market.'); return; }
     document.getElementById('f-closing').value = odds;
   } catch (e) {
     alert('Could not fetch closing odds: ' + e.message);
@@ -2135,10 +2131,10 @@ function renderModelCard(g) {
   const kHomeML   = `${g.gamePk}_ml_home`;
   const kOver     = `${g.gamePk}_ou_over`;
   const kUnder    = `${g.gamePk}_ou_under`;
-  window._betPrefills[kAwayML] = { ...pfBase, market: 'ML',  pick: `${g.away.abbr} ML`, modelProb: m.ml.away.modelProb,  impliedProb: m.ml.away.impliedProb,  ev: m.ml.away.ev,  snapshotOdds: m.ml.away.bestOdds };
-  window._betPrefills[kHomeML] = { ...pfBase, market: 'ML',  pick: `${g.home.abbr} ML`, modelProb: m.ml.home.modelProb,  impliedProb: m.ml.home.impliedProb,  ev: m.ml.home.ev,  snapshotOdds: m.ml.home.bestOdds };
-  window._betPrefills[kOver]   = { ...pfBase, market: 'O/U', pick: `Over ${ouLineStr}`,  modelProb: m.ou.over.modelProb,  impliedProb: m.ou.over.impliedProb,  ev: m.ou.over.ev,  snapshotOdds: m.ou.over.bestOdds };
-  window._betPrefills[kUnder]  = { ...pfBase, market: 'O/U', pick: `Under ${ouLineStr}`, modelProb: m.ou.under.modelProb, impliedProb: m.ou.under.impliedProb, ev: m.ou.under.ev, snapshotOdds: m.ou.under.bestOdds };
+  window._betPrefills[kAwayML] = { ...pfBase, market: 'ML',  pick: `${g.away.abbr} ML`, modelProb: m.ml.away.modelProb,  impliedProb: m.ml.away.impliedProb,  ev: m.ml.away.ev,  snapshotOdds: m.ml.away.bestOdds, closingOddsKey: 'mlAway' };
+  window._betPrefills[kHomeML] = { ...pfBase, market: 'ML',  pick: `${g.home.abbr} ML`, modelProb: m.ml.home.modelProb,  impliedProb: m.ml.home.impliedProb,  ev: m.ml.home.ev,  snapshotOdds: m.ml.home.bestOdds, closingOddsKey: 'mlHome' };
+  window._betPrefills[kOver]   = { ...pfBase, market: 'O/U', pick: `Over ${ouLineStr}`,  modelProb: m.ou.over.modelProb,  impliedProb: m.ou.over.impliedProb,  ev: m.ou.over.ev,  snapshotOdds: m.ou.over.bestOdds,  closingOddsKey: 'ouOver'  };
+  window._betPrefills[kUnder]  = { ...pfBase, market: 'O/U', pick: `Under ${ouLineStr}`, modelProb: m.ou.under.modelProb, impliedProb: m.ou.under.impliedProb, ev: m.ou.under.ev, snapshotOdds: m.ou.under.bestOdds, closingOddsKey: 'ouUnder' };
 
   return `
     <div class="gm-card ${cardCls}">
@@ -2360,15 +2356,16 @@ function renderKPropCard(p, rank) {
   const kpKey = `${p.gamePk}_kprop_${p.pitcher.id}`;
   if (p.propLine != null) {
     window._betPrefills[kpKey] = {
-      game:        `${p.team.abbr} vs ${p.opponent.abbr}`,
-      gamePk:      p.gamePk,
-      date:        new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      market:      'K Prop',
-      pick:        `${p.pitcher.name} Over ${p.propLine} Ks`,
-      modelProb:   p.modelProb,
-      impliedProb: p.impliedProb,
-      ev:          p.ev,
-      snapshotOdds: p.propBooks?.[0]?.over ?? null
+      game:           `${p.team.abbr} vs ${p.opponent.abbr}`,
+      gamePk:         p.gamePk,
+      date:           new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      market:         'K Prop',
+      pick:           `${p.pitcher.name} Over ${p.propLine} Ks`,
+      modelProb:      p.modelProb,
+      impliedProb:    p.impliedProb,
+      ev:             p.ev,
+      snapshotOdds:   p.propBooks?.[0]?.over ?? null,
+      closingOddsKey: null   // K prop odds not tracked in closing cache
     };
   }
 

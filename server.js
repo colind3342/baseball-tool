@@ -115,16 +115,35 @@ async function refreshOdds() {
       const odds = findOddsEntry(raw, game.away.teamName, game.home.teamName);
       if (!odds) continue;
 
-      const books  = Object.values(odds.books || {});
-      const bestML = fn => { const v = books.map(fn).filter(n => n != null); return v.length ? Math.max(...v) : null; };
+      const books = Object.values(odds.books || {});
+
+      // For closing line / CLV we want the CONSENSUS (fair market) line,
+      // not the best available across books. Average the implied probabilities
+      // across all books, then convert back to American odds.
+      function impliedToAmerican(imp) {
+        if (imp == null || imp <= 0 || imp >= 1) return null;
+        return imp >= 0.5
+          ? Math.round(-(imp / (1 - imp)) * 100)
+          : Math.round(((1 - imp) / imp) * 100);
+      }
+      function toImp(odds) {
+        if (odds == null) return null;
+        return odds >= 0 ? 100 / (odds + 100) : Math.abs(odds) / (Math.abs(odds) + 100);
+      }
+      function consensusOdds(fn) {
+        const imps = books.map(fn).filter(n => n != null).map(toImp).filter(n => n != null);
+        if (!imps.length) return null;
+        return impliedToAmerican(imps.reduce((a, b) => a + b, 0) / imps.length);
+      }
+
       const ouLines = books.map(b => b.total?.line).filter(n => n != null);
 
       const snap = {
-        mlHome:  bestML(b => b.ml?.home),
-        mlAway:  bestML(b => b.ml?.away),
+        mlHome:  consensusOdds(b => b.ml?.home),
+        mlAway:  consensusOdds(b => b.ml?.away),
         ouLine:  ouLines.length ? ouLines.reduce((a, b) => a + b, 0) / ouLines.length : null,
-        ouOver:  bestML(b => b.total?.overOdds),
-        ouUnder: bestML(b => b.total?.underOdds),
+        ouOver:  consensusOdds(b => b.total?.overOdds),
+        ouUnder: consensusOdds(b => b.total?.underOdds),
         snappedAt: new Date().toISOString()
       };
 
