@@ -4,9 +4,12 @@ const BASE   = 'https://statsapi.mlb.com/api/v1';
 const SEASON = new Date().getFullYear();
 
 function dateStr(daysAgo = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().split('T')[0];
+  // MLB schedule is organized around Eastern Time — use ET date, not UTC.
+  // After ~8pm ET (midnight UTC) the server would otherwise fetch tomorrow's games.
+  const now = new Date();
+  now.setDate(now.getDate() - daysAgo);
+  // en-CA locale returns YYYY-MM-DD, which is what the MLB API expects.
+  return now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
 
 async function safeFetch(url) {
